@@ -3,6 +3,7 @@
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
+    Computed,
     ForeignKey,
     Identity,
     Index,
@@ -12,11 +13,13 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
 from app.models.sekuens import SEQ_KODE_EKSEMPLAR
 from app.models.status import StatusEksemplar, ck_nilai
+
+ISBN_NORMAL_SQL = "upper(regexp_replace(isbn, '[-[:space:]]', '', 'g'))"
 
 
 def _trgm(nama: str, kolom: str) -> Index:
@@ -54,7 +57,12 @@ class JudulBuku(Base):
     __tablename__ = "judul_buku"
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
-    isbn: Mapped[str] = mapped_column(Text, unique=True)  # ASUMSI(OQ-06): wajib, unik, teks
+    isbn: Mapped[str] = mapped_column(Text)  # ASUMSI(OQ-06): wajib, teks seperti diketik admin
+    # ASUMSI(OQ-13): keunikan & pencarian ISBN memakai bentuk ternormalisasi (tanpa tanda
+    # hubung/spasi, x → X). Harus sama dengan app.core.validasi.normalisasi_isbn.
+    isbn_normal: Mapped[str] = mapped_column(
+        Text, Computed(ISBN_NORMAL_SQL, persisted=True), unique=True
+    )
     judul: Mapped[str] = mapped_column(Text)
     penulis: Mapped[str] = mapped_column(Text)
     penerbit: Mapped[str] = mapped_column(Text)  # ASUMSI(OQ-10): wajib
@@ -64,6 +72,9 @@ class JudulBuku(Base):
         BigInteger, ForeignKey("kategori.id", ondelete="RESTRICT"), index=True
     )
     cover_path: Mapped[str | None] = mapped_column(Text)  # ASUMSI(OQ-10): opsional
+    # Hanya arah judul → kategori (tanpa backref): menghapus kategori tidak menyentuh judul di ORM,
+    # sehingga FK RESTRICT yang menolak bila kategori masih dipakai (FR-BKU-01).
+    kategori: Mapped[Kategori] = relationship()
     harga: Mapped[int] = mapped_column(BigInteger)  # Rupiah bulat; berlaku untuk semua eksemplar
 
     __table_args__ = (
@@ -72,7 +83,7 @@ class JudulBuku(Base):
         CheckConstraint("tahun > 0", name="tahun_positif"),
         _trgm("ix_judul_buku_judul_trgm", "judul"),
         _trgm("ix_judul_buku_penulis_trgm", "penulis"),
-        _trgm("ix_judul_buku_isbn_trgm", "isbn"),
+        _trgm("ix_judul_buku_isbn_normal_trgm", "isbn_normal"),  # OQ-13
     )
 
 

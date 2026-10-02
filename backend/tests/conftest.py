@@ -89,3 +89,27 @@ def atur_waktu() -> Iterator[Callable[[datetime], None]]:
 
     yield _atur
     waktu.atur_jam(None)
+
+
+@pytest.fixture(autouse=True)
+def penyimpanan_sementara(tmp_path: Path, monkeypatch) -> Iterator[Path]:
+    """Unggahan test ditulis ke folder sementara, tidak pernah ke backend/storage/."""
+    folder = tmp_path / "storage"
+    folder.mkdir()
+    monkeypatch.setenv("STORAGE_DIR", str(folder))
+    get_settings.cache_clear()
+    yield folder
+    monkeypatch.undo()
+    get_settings.cache_clear()
+
+
+@pytest.fixture
+def klien_admin(client: TestClient, db: Session) -> TestClient:
+    """`client` yang sudah login sebagai admin."""
+    from app.core.keamanan import hash_password
+    from tests import pabrik
+
+    akun = pabrik.admin(db, password_hash=hash_password("rahasia-123"))
+    r = client.post("/api/v1/auth/login", json={"email": akun.email, "password": "rahasia-123"})
+    assert r.status_code == 200
+    return client
