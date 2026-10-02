@@ -43,7 +43,9 @@ Bila dokumen desain final dari SA/DE sudah ada, **dokumen itu yang dipakai** dan
 | Format error | `{"detail": {"kode": "PJM_ITEM_MELEBIHI_BATAS", "pesan": "<kalimat Indonesia spesifik>", "rujukan": "FR-PJM-08"}}` |
 | Status HTTP galat | `404` data tidak ada · `409` duplikat atau data masih dipakai · `422` validasi bisnis · `401/403` auth. Semua lewat `GalatBisnis`. `IntegrityError` akibat balapan diterjemahkan (berdasarkan nama constraint) ke galat & pesan yang sama dengan pemeriksaan service; pesan mentah PostgreSQL tidak pernah sampai ke klien |
 | QR scan (frontend) | library pemindai QR berbasis kamera browser (mis. `html5-qrcode` atau `@zxing/browser`) |
-| QR generate | dibuat di backend atau frontend; isi QR = kode teks polos |
+| QR generate | Backend hanya menyediakan **data label** (`GET /admin/eksemplar/label`: kode, judul singkat, isi QR = kode teks polos). Gambar QR & tata letak beberapa label per A4 dibuat di frontend WP 5.4.7 dengan CSS cetak (FR-BKU-06, IR-HW-02); tanpa library PDF di backend |
+| Label: judul singkat | Maks **30 karakter** termasuk `…`; spasi berlebih dirapikan; dipotong di batas kata terakhir, atau keras bila tak ada spasi (`judul_singkat()` di `services/eksemplar.py`) |
+| Batas permintaan eksemplar | Tambah eksemplar **1–100** per permintaan; data label **1–200** id per permintaan. Pesan penolakan menyebut batasnya |
 | Ekspor | PDF dan `.xlsx` dibuat di backend (mis. `openpyxl` untuk Excel) |
 | Penyimpanan file | cover & foto: JPG/PNG ≤ 2 MB (NFR-SEC-06) = **2.097.152 byte** (`UKURAN_MAKS_GAMBAR`, tepat 2 MB diterima), resolusi ≤ 40 megapiksel (`BATAS_PIKSEL`; peringatan bom Pillow = galat). Jenis dari **isi** (magic bytes + dekode penuh Pillow), bukan nama/Content-Type. Disimpan di `STORAGE_DIR` (default `backend/storage/`, tidak di-commit) dengan nama `<uuid>.<ext>` buatan server; path di DB relatif terhadap `STORAGE_DIR`. Satu modul untuk cover & foto: `app/services/berkas.py` |
 | CI | **Ditunda** (diputuskan 2026-10-02). Dibuat setelah repo punya remote, sebagai tugas kecil terpisah di luar WP fitur: jalankan pytest, Ruff, ESLint/Prettier, Vitest, dan build di setiap PR. Jangan dikerjakan di dalam WP mana pun. |
@@ -73,6 +75,8 @@ Pakai default ini dan tandai di kode `ASUMSI(OQ-xx)`. Konfirmasi ke BA/SA sebelu
 | OQ-17 | Sesi: batas tepat 8 jam & sesi bersamaan (NFR-SEC-04 hanya menyebut "setelah 8 jam tanpa aktivitas"). | Menganggur **≥ 8 jam** = berakhir. Satu akun boleh punya beberapa sesi aktif (ponsel + desktop); logout hanya mengakhiri sesi perangkat itu. |
 | OQ-18 | Bentuk ISBN yang diterima (OQ-06 hanya "boleh ISBN-10 atau ISBN-13"). | Setelah normalisasi OQ-13: **10 karakter** (9 digit + digit/`X`) atau **13 digit**. Tanpa cek digit kontrol (buku lama sering salah cetak). Selain itu ditolak dengan pesan yang menyebut bentuk yang benar. |
 | OQ-19 | Hapus cover tanpa mengganti. | **Tidak ada.** Cover hanya bisa diunggah/diganti (FR-BKU-02 "mengubah"). |
+| OQ-20 | Hapus/koreksi eksemplar yang salah ditambahkan (mis. admin menambah 10 padahal 1). FR-BKU-04..09 tidak menyebut hapus eksemplar. | **Tidak ada fitur hapus eksemplar.** Eksemplar hanya terhapus bersama judulnya (OQ-12). Risiko salah input dicegah di UI dengan konfirmasi jumlah sebelum simpan (WP 5.4.7). **Perlu dikonfirmasi ke client.** |
+| OQ-21 | Ubah rak eksemplar yang Dipinjam/Hilang/Rusak (FR-BKU-08 hanya melarang ubah **status**). | Diizinkan untuk status apa pun; lokasi rak bukan status. |
 
 Bila menemukan celah baru yang tidak ada di tabel ini: **jangan pilih sendiri**. Tanyakan, lalu tambahkan
 baris OQ baru di sini setelah dijawab.
