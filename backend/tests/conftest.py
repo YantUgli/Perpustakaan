@@ -76,7 +76,7 @@ def client(db: Session) -> Iterator[TestClient]:
 
     app = create_app()
     app.dependency_overrides[get_db] = lambda: db
-    with TestClient(app) as c:
+    with TestClient(app, base_url="https://testserver") as c:  # cookie sesi ber-atribut Secure
         yield c
 
 
