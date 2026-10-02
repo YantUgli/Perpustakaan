@@ -43,6 +43,13 @@ class CaraPenyelesaian(StrEnum):
     BUKU_PENGGANTI = "BUKU_PENGGANTI"
 
 
+class Role(StrEnum):
+    """Dua role terautentikasi (BR-02). Pengunjung umum bukan role."""
+
+    ADMIN = "ADMIN"
+    ANGGOTA = "ANGGOTA"
+
+
 def ck_nilai(kolom: str, nilai: type[StrEnum], nama: str | None = None) -> CheckConstraint:
     """CHECK `kolom IN (...)` dari sebuah StrEnum. Kolom NULL lolos (atur NOT NULL terpisah)."""
     daftar = ", ".join(f"'{v.value}'" for v in nilai)

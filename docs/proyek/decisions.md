@@ -33,6 +33,8 @@ Bila dokumen desain final dari SA/DE sudah ada, **dokumen itu yang dipakai** dan
 | Skema: indeks ekspresi | Indeks unik `lower(trim(...))` (OQ-09) dilewati autogenerate lewat `sertakan_objek_alembic` (Alembic tak bisa membandingkannya). Mengubahnya = tulis manual di migration baru |
 | Hash password | argon2id via `argon2-cffi`, parameter default (`app/core/keamanan.py`); berlaku juga untuk WP 5.3.1 (NFR-SEC-01) |
 | Validasi email | `email-validator` tanpa cek DNS (`app/core/validasi.py`), dipakai bersama seed admin dan pendaftaran (FR-AKN-03). Domain special-use (`.test`, `.local`, …) ditolak; test memakai `@….example` |
+| Sesi & autentikasi | Tabel `sesi` (hash SHA-256 token, `terakhir_aktif`), cookie `sesi_perpus` `HttpOnly; Secure; SameSite=Lax; Path=/` — **Secure tanpa saklar** di semua `APP_ENV`. Token baru setiap login; sesi kedaluwarsa dihapus saat terdeteksi & dibersihkan saat login (tanpa cron). Role diperiksa lewat `router_admin`/`router_anggota` (`app/api/deps.py`). Lihat OQ-04, OQ-16, OQ-17 |
+| Origin frontend–API | **Satu origin**: reverse proxy meneruskan `/api/v1` ke FastAPI pada domain yang sama dengan Next.js (dev: rewrite Next.js). Tidak ada CORS. Bila kelak API di domain terpisah, CORS + credentials harus diputuskan ulang |
 | Lingkungan | `APP_ENV` ∈ {`dev`, `staging`, `production`} (default `dev`); nilai lain menggagalkan start. Seed: `python -m app.seed {admin|data-uji|performa}` |
 | Frontend | Next.js App Router + TypeScript, Tailwind |
 | Lint/format/test frontend | ESLint (konfigurasi Next) + Prettier (`eslint-config-prettier`), Vitest; Node ≥ 24 |
@@ -66,6 +68,8 @@ Pakai default ini dan tandai di kode `ASUMSI(OQ-xx)`. Konfirmasi ke BA/SA sebelu
 | OQ-13 | Keunikan & pencarian ISBN: `978-602-…` dan `978602…` sama? | **Sama.** ISBN disimpan seperti diketik admin (untuk tampilan), tetapi keunikan dibandingkan pada bentuk ternormalisasi (buang tanda hubung & spasi, huruf `x` → `X`), dan pencarian ISBN di katalog juga mengabaikan tanda hubung. Dikerjakan di WP 5.3.5 lewat migration baru. |
 | OQ-14 | Admin lupa password (K-03 hanya mengatur anggota; K-04 melarang menu kelola admin). | **Tidak ada fitur.** Seed admin tidak menimpa password admin yang sudah ada. Prosedur operasional: tim teknis menjalankan seed admin dengan email lain untuk membuat admin baru. Didokumentasikan di panduan instalasi, bukan dibangun di aplikasi. |
 | OQ-15 | Data awal produksi (WBS 5.2.2 menyebut kategori, rak, buku uji). | Produksi hanya di-seed **akun admin**. Kategori, rak, dan buku diisi admin lewat FR-BKU-01/02. Data uji & data performa hanya untuk dev/staging dan ditolak bila `APP_ENV=production`. |
+| OQ-16 | Pesan login gagal vs IR-UI-04 (alasan spesifik) — menyebut "email tidak terdaftar" membocorkan akun yang ada. | Satu pesan untuk email tak terdaftar maupun password salah: **"Email atau password salah."** Dianggap memenuhi IR-UI-04 (alasannya: kombinasi kredensial tidak cocok), tanpa menyebut isian mana. |
+| OQ-17 | Sesi: batas tepat 8 jam & sesi bersamaan (NFR-SEC-04 hanya menyebut "setelah 8 jam tanpa aktivitas"). | Menganggur **≥ 8 jam** = berakhir. Satu akun boleh punya beberapa sesi aktif (ponsel + desktop); logout hanya mengakhiri sesi perangkat itu. |
 
 Bila menemukan celah baru yang tidak ada di tabel ini: **jangan pilih sendiri**. Tanyakan, lalu tambahkan
 baris OQ baru di sini setelah dijawab.

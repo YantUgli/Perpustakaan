@@ -19,6 +19,7 @@ TABEL_DOMAIN = {
     "transaksi_peminjaman",
     "item_transaksi",
     "tagihan",
+    "sesi",
 }
 
 
