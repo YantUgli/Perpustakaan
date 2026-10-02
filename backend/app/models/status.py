@@ -1,0 +1,49 @@
+"""Kosakata status tersimpan (domain-rules §2). Disimpan sebagai kode; label UI dipetakan di klien.
+
+`Terlambat` sengaja tidak ada: ia kondisi turunan (FR-DND-05), bukan status tersimpan.
+"""
+
+from enum import StrEnum
+
+from sqlalchemy import CheckConstraint
+
+
+class StatusEksemplar(StrEnum):
+    TERSEDIA = "TERSEDIA"
+    DIPINJAM = "DIPINJAM"
+    HILANG = "HILANG"
+    RUSAK = "RUSAK"
+
+
+class StatusItem(StrEnum):
+    DIPINJAM = "DIPINJAM"
+    DIKEMBALIKAN = "DIKEMBALIKAN"
+    HILANG = "HILANG"
+    RUSAK = "RUSAK"
+
+
+class StatusTransaksi(StrEnum):
+    AKTIF = "AKTIF"
+    SELESAI = "SELESAI"
+
+
+class StatusTagihan(StrEnum):
+    BELUM_LUNAS = "BELUM_LUNAS"
+    LUNAS = "LUNAS"
+
+
+class JenisTagihan(StrEnum):
+    DENDA = "DENDA"
+    PENGGANTIAN = "PENGGANTIAN"
+
+
+class CaraPenyelesaian(StrEnum):
+    TUNAI = "TUNAI"
+    TRANSFER = "TRANSFER"
+    BUKU_PENGGANTI = "BUKU_PENGGANTI"
+
+
+def ck_nilai(kolom: str, nilai: type[StrEnum], nama: str | None = None) -> CheckConstraint:
+    """CHECK `kolom IN (...)` dari sebuah StrEnum. Kolom NULL lolos (atur NOT NULL terpisah)."""
+    daftar = ", ".join(f"'{v.value}'" for v in nilai)
+    return CheckConstraint(f"{kolom} IN ({daftar})", name=nama or kolom)

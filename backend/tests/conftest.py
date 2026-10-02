@@ -3,6 +3,7 @@
 import os
 from collections.abc import Callable, Iterator
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -25,6 +26,26 @@ except DatabaseTestTidakAman as exc:
 # Arahkan aplikasi ke database test.
 os.environ["DATABASE_URL"] = DATABASE_URL_TEST
 get_settings.cache_clear()
+
+
+def alembic_config():
+    """Config Alembic yang mengarah ke database test."""
+    from alembic.config import Config
+
+    backend = Path(__file__).resolve().parents[1]
+    cfg = Config(str(backend / "alembic.ini"))
+    cfg.set_main_option("script_location", str(backend / "alembic"))
+    cfg.set_main_option("sqlalchemy.url", DATABASE_URL_TEST)
+    cfg.attributes["configure_logger"] = False
+    return cfg
+
+
+@pytest.fixture(scope="session", autouse=True)
+def skema_terbaru() -> None:
+    """Pastikan DB test berada di migration terbaru sebelum test apa pun (NFR-MNT-01)."""
+    from alembic import command
+
+    command.upgrade(alembic_config(), "head")
 
 
 @pytest.fixture(scope="session")
