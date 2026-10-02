@@ -106,6 +106,7 @@ class Eksemplar(Base):
     rak_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("rak.id", ondelete="RESTRICT"), index=True
     )
+    rak: Mapped[Rak] = relationship()  # satu arah (tanpa backref), sama seperti JudulBuku.kategori
     status: Mapped[str] = mapped_column(
         String(20),
         server_default=StatusEksemplar.TERSEDIA.value,  # FR-BKU-04

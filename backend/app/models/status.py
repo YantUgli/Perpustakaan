@@ -15,6 +15,15 @@ class StatusEksemplar(StrEnum):
     RUSAK = "RUSAK"
 
 
+# Label UI persis seperti IR-UI-03; dipakai juga di pesan galat (IR-UI-04).
+LABEL_STATUS_EKSEMPLAR = {
+    StatusEksemplar.TERSEDIA: "Tersedia",
+    StatusEksemplar.DIPINJAM: "Dipinjam",
+    StatusEksemplar.HILANG: "Hilang",
+    StatusEksemplar.RUSAK: "Rusak",
+}
+
+
 class StatusItem(StrEnum):
     DIPINJAM = "DIPINJAM"
     DIKEMBALIKAN = "DIKEMBALIKAN"
