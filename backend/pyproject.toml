@@ -1,0 +1,39 @@
+[project]
+name = "perpustakaan-backend"
+version = "0.1.0"
+description = "Backend FastAPI Sistem Informasi Perpustakaan"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.0",
+    "fastapi>=0.142.2",
+    "psycopg[binary]>=3",
+    "pydantic-settings>=2.15.0",
+    "sqlalchemy>=2",
+    "tzdata>=2026.4",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "S", "DTZ", "SIM"]
+# N802: nama test memuat kode kebutuhan berhuruf besar (test_FR_PJM_08_...), aturan keterlacakan proyek.
+# N818: kelas exception dinamai Bahasa Indonesia (`GalatBisnis`), bukan berakhiran "Error".
+ignore = ["N802", "N818"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+"alembic/**" = ["N999"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

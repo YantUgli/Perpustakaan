@@ -1,0 +1,30 @@
+# Progres Implementasi
+
+Diperbarui setiap akhir WP. Status: `Belum` · `Berjalan` · `Selesai` · `Tertahan`.
+Kolom "Asumsi" berisi kode OQ yang dipakai; kolom "Catatan" berisi hal yang perlu diperiksa manusia.
+
+| WP | Nama | Status | FR tercakup & teruji | Asumsi | Catatan |
+|---|---|---|---|---|---|
+| 5.1.1–5.1.3 | Setup repo, Next.js, FastAPI | Selesai | IR-COM-01, K-07 (`hari_ini_wib`), NFR-MNT-01 (alembic up/down); backend 18/18, frontend 2/2 | — | Belum ada commit (menunggu izin). CI belum ada (di luar WBS 5.1). |
+| 5.1.4 | Staging HTTPS | Belum | — | — | dikerjakan manusia |
+| 5.2.1 | Migration skema | Belum | | | |
+| 5.2.2 | Seed | Belum | | | |
+| 5.3.1 | Autentikasi | Belum | | | |
+| 5.3.5 | Judul, kategori, rak | Belum | | | |
+| 5.3.6 | Eksemplar | Belum | | | |
+| 5.3.2 | Katalog & pencarian | Belum | | | |
+| 5.3.3 | Pendaftaran | Belum | | | Lanjutan dari 5.1: pesan validasi 422 bawaan FastAPI masih Bahasa Inggris → wajib di-Indonesiakan di WP ini (NFR-USA-02, IR-UI-04). |
+| 5.3.4 | Profil & cari anggota | Belum | | | |
+| 5.3.7 | Kalkulasi denda | Belum | | | |
+| 5.3.8 | Peminjaman | Belum | | | |
+| 5.3.9 | Pengembalian | Belum | | | |
+| 5.3.10 | Hilang/rusak | Belum | | | |
+| 5.3.11 | Tagihan | Belum | | | |
+| 5.3.12 | Area anggota | Belum | | | |
+| 5.2.3 / 5.3.13 | Dashboard & laporan | Belum | | | |
+| 5.4.1–5.4.9 | Frontend | Belum | | | rinci per WP saat mulai |
+
+## Log sesi
+
+<!-- Format: YYYY-MM-DD · WP · ringkasan 1–2 kalimat · test: X lulus / Y total -->
+- 2026-10-02 · 5.1.1–5.1.3 · Repo git + aturan branching, docker-compose PostgreSQL 16 (port 5434), kerangka FastAPI (health, `hari_ini_wib`, `GalatBisnis`, Alembic kosong, penjaga DB `_test`), kerangka Next.js (ESLint+Prettier+Vitest). · test: backend 18 lulus / 18, frontend 2 lulus / 2

@@ -1,0 +1,30 @@
+# Rahasia — hanya *.env.example yang di-commit
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Unggahan (cover & foto) — disimpan di volume, bukan repo
+backend/storage/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
