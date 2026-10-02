@@ -8,8 +8,10 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "email-validator>=2.3.0",
     "fastapi>=0.142.2",
+    "pillow>=12.3.0",
     "psycopg[binary]>=3",
     "pydantic-settings>=2.15.0",
+    "python-multipart>=0.0.32",
     "sqlalchemy>=2",
     "tzdata>=2026.4",
     "uvicorn[standard]>=0.54.0",
@@ -41,3 +43,5 @@ ignore = ["N802", "N818"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+# pytest mengatur ulang filter warning per test; samakan dengan filter produksi di app/services/berkas.py
+filterwarnings = ["error::PIL.Image.DecompressionBombWarning"]

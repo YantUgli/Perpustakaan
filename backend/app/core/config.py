@@ -1,6 +1,7 @@
 """Konfigurasi aplikasi dari environment / berkas `.env`."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,6 +17,9 @@ class Settings(BaseSettings):
     # ASUMSI(OQ-15): hanya tiga nilai sah; salah ketik (mis. "prod") ditolak saat start.
     # Server produksi wajib APP_ENV=production (data uji/performa ditolak di sana).
     app_env: Literal["dev", "staging", "production"] = "dev"
+
+    # Folder unggahan (cover, foto); path di DB relatif terhadap folder ini. Jangan di-commit.
+    storage_dir: Path = Path(__file__).resolve().parents[2] / "storage"
 
     # Akun admin awal untuk `python -m app.seed admin` (FR-AKN-12). Jangan isi di .env.example.
     admin_awal_nama: str | None = None

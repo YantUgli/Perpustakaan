@@ -117,7 +117,8 @@ def test_DR_05_isbn_unik(db):
     p.judul(db, isbn="9786020000001")
     with pytest.raises(IntegrityError) as info, db.begin_nested():
         p.judul(db, isbn="9786020000001")
-    assert info.value.orig.diag.constraint_name == "uq_judul_buku_isbn"
+    # OQ-13 (WP 5.3.5): unik dipindah ke kolom ternormalisasi
+    assert info.value.orig.diag.constraint_name == "uq_judul_buku_isbn_normal"
 
 
 @pytest.mark.parametrize("kolom", ["isbn", "judul", "penulis", "penerbit", "tahun", "kategori_id"])
@@ -444,7 +445,7 @@ def test_FR_KTL_02_indeks_trigram_pencarian_ada(db):
     for tabel, kolom in [
         ("judul_buku", "judul"),
         ("judul_buku", "penulis"),
-        ("judul_buku", "isbn"),
+        ("judul_buku", "isbn_normal"),  # OQ-13 (WP 5.3.5)
         ("kategori", "nama"),
         ("anggota", "nama"),
     ]:
