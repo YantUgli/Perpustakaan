@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from app.api.v1 import router as router_v1
 from app.core.config import get_settings
-from app.core.galat import daftarkan_penangan_galat
+from app.core.galat import daftarkan_penangan_galat, pasang_skema_galat_openapi
 
 
 def create_app() -> FastAPI:
@@ -17,6 +17,7 @@ def create_app() -> FastAPI:
     )
     daftarkan_penangan_galat(app)
     app.include_router(router_v1)
+    pasang_skema_galat_openapi(app)  # skema 422 di OpenAPI = format galat §B (IR-COM-01)
     return app
 
 

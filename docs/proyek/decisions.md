@@ -40,7 +40,9 @@ Bila dokumen desain final dari SA/DE sudah ada, **dokumen itu yang dipakai** dan
 | Lint/format/test frontend | ESLint (konfigurasi Next) + Prettier (`eslint-config-prettier`), Vitest; Node ≥ 24 |
 | Arsitektur backend | `api/` (router tipis) → `services/` (aturan bisnis, transaksi DB) → `models/`. Aturan bisnis **tidak** boleh di router. |
 | Kontrak API | OpenAPI otomatis dari FastAPI adalah kontrak (IR-COM-01). Prefix `/api/v1`. |
-| Format error | `{"detail": {"kode": "PJM_ITEM_MELEBIHI_BATAS", "pesan": "<kalimat Indonesia spesifik>", "rujukan": "FR-PJM-08"}}` |
+| Format error | `{"detail": {"kode": "PJM_ITEM_MELEBIHI_BATAS", "pesan": "<kalimat Indonesia spesifik>", "rujukan": "FR-PJM-08"}}`. Field **opsional** `isian: {nama_isian: pesan}` hanya muncul bila galat menyangkut isian tertentu (IR-UI-04, frontend 5.4.3); `pesan` tetap kalimat ringkas yang menyebut semua isian bermasalah. Kunci `isian` = nama field terakhir dari `loc`, tanpa prefix `body`/`query` |
+| Galat 422 validasi FastAPI | Penangan global `RequestValidationError` → `kode = "VALIDASI_ISIAN"`, `rujukan = "IR-UI-04"`, pesan Indonesia per isian (tipe tak dipetakan → "Nilai tidak valid."). **Tidak pernah** memantulkan `input`/`ctx`/`url` Pydantic (mencegah password terpantul). Skema 422 di OpenAPI diganti `GalatRespons` (IR-COM-01) |
+| Kode galat gambar | `berkas.periksa_gambar(prefiks=…)`: cover `BKU_COVER_*` (kontrak 5.3.5 tetap), foto anggota `AKN_FOTO_*`; `rujukan` NFR-SEC-06 |
 | Status HTTP galat | `404` data tidak ada · `409` duplikat atau data masih dipakai · `422` validasi bisnis · `401/403` auth. Semua lewat `GalatBisnis`. `IntegrityError` akibat balapan diterjemahkan (berdasarkan nama constraint) ke galat & pesan yang sama dengan pemeriksaan service; pesan mentah PostgreSQL tidak pernah sampai ke klien |
 | QR scan (frontend) | library pemindai QR berbasis kamera browser (mis. `html5-qrcode` atau `@zxing/browser`) |
 | QR generate | Backend hanya menyediakan **data label** (`GET /admin/eksemplar/label`: kode, judul singkat, isi QR = kode teks polos). Gambar QR & tata letak beberapa label per A4 dibuat di frontend WP 5.4.7 dengan CSS cetak (FR-BKU-06, IR-HW-02); tanpa library PDF di backend |
@@ -92,6 +94,8 @@ Pakai default ini dan tandai di kode `ASUMSI(OQ-xx)`. Konfirmasi ke BA/SA sebelu
 | OQ-27 | `tanggal_dibentuk` tagihan Penggantian. | Hari ini WIB (tanggal pencatatan), bukan `tanggal_kejadian`; konsisten dengan OQ-11 dan OQ-25. |
 | OQ-28 | Asal & batas tanggal penyelesaian tagihan (FR-TGH-02 "mencatat … tanggal", FR-TGH-03 "tanggal penerimaan"). | Wajib diisi admin (Brief §6.5 langkah 2–3); `tanggal_dibentuk ≤ tanggal ≤ hari_ini_wib()` (kedua batas inklusif); pesan penolakan menyebut batas dalam `DD/MM/YYYY`, `rujukan` FR-TGH-02 (Tunai/Transfer) atau FR-TGH-03 (Buku Pengganti). Tanggal hanya dicatat; tidak memengaruhi nominal maupun status lain. |
 | OQ-29 | "Filter anggota" pada daftar tagihan (FR-TGH-01). | Berdasarkan **kode anggota** (dinormalisasi, cocok persis). Bila admin hanya tahu nama/NIK, cari kodenya lewat FR-AKN-10 (5.3.4). |
+| OQ-30 | Setelah pendaftaran: login otomatis? (FR-AKN-04 hanya "akun berstatus aktif"). | **Tidak.** Respons 201 berisi kode anggota & `isi_qr`; pengguna login lewat FR-AKN-05. Satu jalur pembuatan sesi. |
+| OQ-31 | Format nomor telepon anggota (SRS & Brief §5.3 hanya "wajib"). | Wajib, di-trim, **tanpa** validasi format. Format tertentu dibuat bila BA memutuskan. |
 
 Bila menemukan celah baru yang tidak ada di tabel ini: **jangan pilih sendiri**. Tanyakan, lalu tambahkan
 baris OQ baru di sini setelah dijawab.
