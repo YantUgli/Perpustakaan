@@ -84,6 +84,7 @@ Pakai default ini dan tandai di kode `ASUMSI(OQ-xx)`. Konfirmasi ke BA/SA sebelu
 | OQ-22 | FR-KTL-01 menampilkan "lokasi rak" per **judul**, padahal rak melekat pada eksemplar (DR-06) dan satu judul bisa di beberapa rak. | Daftar rak **unik** dari eksemplar yang dihitung di Y (Tersedia atau Dipinjam); rak eksemplar Hilang/Rusak tidak ditampilkan. Format per OQ-08 (kode, + lokasi bila ada). |
 | OQ-23 | Judul tanpa eksemplar, atau semua eksemplarnya Hilang/Rusak — tampil di katalog? | **Tetap tampil** sebagai "0 dari 0" dengan daftar rak kosong (SRS tidak memuat aturan menyembunyikan). |
 | OQ-24 | Bentuk pencarian katalog (FR-KTL-02, IR-UI-05). | Satu kata kunci, dicocokkan sebagai satu frasa substring (`ILIKE '%q%'`, wildcard di-escape) ke judul, penulis, ISBN ternormalisasi (OQ-13), dan nama kategori, digabung OR. Bila kata kunci ternormalisasi untuk ISBN kosong (mis. `"-"`), kondisi ISBN dilewati. Tanpa multi-token tak berurutan, full-text, atau fuzzy. |
+| OQ-25 | Asal `tanggal_kembali` (FR-KMB-05 hanya "mencatat tanggal kembali") dan nominal denda bila pratinjau & konfirmasi berbeda hari. | `tanggal_kembali` selalu `hari_ini_wib()` saat konfirmasi; **tanpa** isian manual atau tanggal mundur (Brief §6.3; sejajar FR-PJM-11). Pratinjau bersifat informasi; nominal final dihitung dari `tanggal_kembali` saat konfirmasi (FR-DND-01) dengan harga judul saat itu, dan dikembalikan di respons konfirmasi. |
 
 Bila menemukan celah baru yang tidak ada di tabel ini: **jangan pilih sendiri**. Tanyakan, lalu tambahkan
 baris OQ baru di sini setelah dijawab.
