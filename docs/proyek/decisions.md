@@ -45,6 +45,8 @@ Bila dokumen desain final dari SA/DE sudah ada, **dokumen itu yang dipakai** dan
 | QR scan (frontend) | library pemindai QR berbasis kamera browser (mis. `html5-qrcode` atau `@zxing/browser`) |
 | QR generate | Backend hanya menyediakan **data label** (`GET /admin/eksemplar/label`: kode, judul singkat, isi QR = kode teks polos). Gambar QR & tata letak beberapa label per A4 dibuat di frontend WP 5.4.7 dengan CSS cetak (FR-BKU-06, IR-HW-02); tanpa library PDF di backend |
 | Label: judul singkat | Maks **30 karakter** termasuk `…`; spasi berlebih dirapikan; dipotong di batas kata terakhir, atau keras bila tak ada spasi (`judul_singkat()` di `services/eksemplar.py`) |
+| Daftar berhalaman | `halaman` ≥ 1, `per_halaman` 1–100 (default 20); urutan judul A–Z (`lower(judul)`) lalu `id`. Sama untuk katalog publik dan daftar judul admin. Halaman di luar jangkauan → `data` kosong |
+| Cover publik | `GET /api/v1/katalog/judul/{id}/cover` hanya menyajikan `cover_path` milik judul itu dari DB (tak pernah nama/path dari klien), path wajib di dalam `STORAGE_DIR`, Content-Type dari ekstensi buatan server. Tanpa cover / berkas hilang → 404. Foto anggota **tidak** disajikan publik |
 | Batas permintaan eksemplar | Tambah eksemplar **1–100** per permintaan; data label **1–200** id per permintaan. Pesan penolakan menyebut batasnya |
 | Ekspor | PDF dan `.xlsx` dibuat di backend (mis. `openpyxl` untuk Excel) |
 | Penyimpanan file | cover & foto: JPG/PNG ≤ 2 MB (NFR-SEC-06) = **2.097.152 byte** (`UKURAN_MAKS_GAMBAR`, tepat 2 MB diterima), resolusi ≤ 40 megapiksel (`BATAS_PIKSEL`; peringatan bom Pillow = galat). Jenis dari **isi** (magic bytes + dekode penuh Pillow), bukan nama/Content-Type. Disimpan di `STORAGE_DIR` (default `backend/storage/`, tidak di-commit) dengan nama `<uuid>.<ext>` buatan server; path di DB relatif terhadap `STORAGE_DIR`. Satu modul untuk cover & foto: `app/services/berkas.py` |
@@ -77,6 +79,9 @@ Pakai default ini dan tandai di kode `ASUMSI(OQ-xx)`. Konfirmasi ke BA/SA sebelu
 | OQ-19 | Hapus cover tanpa mengganti. | **Tidak ada.** Cover hanya bisa diunggah/diganti (FR-BKU-02 "mengubah"). |
 | OQ-20 | Hapus/koreksi eksemplar yang salah ditambahkan (mis. admin menambah 10 padahal 1). FR-BKU-04..09 tidak menyebut hapus eksemplar. | **Tidak ada fitur hapus eksemplar.** Eksemplar hanya terhapus bersama judulnya (OQ-12). Risiko salah input dicegah di UI dengan konfirmasi jumlah sebelum simpan (WP 5.4.7). **Perlu dikonfirmasi ke client.** |
 | OQ-21 | Ubah rak eksemplar yang Dipinjam/Hilang/Rusak (FR-BKU-08 hanya melarang ubah **status**). | Diizinkan untuk status apa pun; lokasi rak bukan status. |
+| OQ-22 | FR-KTL-01 menampilkan "lokasi rak" per **judul**, padahal rak melekat pada eksemplar (DR-06) dan satu judul bisa di beberapa rak. | Daftar rak **unik** dari eksemplar yang dihitung di Y (Tersedia atau Dipinjam); rak eksemplar Hilang/Rusak tidak ditampilkan. Format per OQ-08 (kode, + lokasi bila ada). |
+| OQ-23 | Judul tanpa eksemplar, atau semua eksemplarnya Hilang/Rusak — tampil di katalog? | **Tetap tampil** sebagai "0 dari 0" dengan daftar rak kosong (SRS tidak memuat aturan menyembunyikan). |
+| OQ-24 | Bentuk pencarian katalog (FR-KTL-02, IR-UI-05). | Satu kata kunci, dicocokkan sebagai satu frasa substring (`ILIKE '%q%'`, wildcard di-escape) ke judul, penulis, ISBN ternormalisasi (OQ-13), dan nama kategori, digabung OR. Bila kata kunci ternormalisasi untuk ISBN kosong (mis. `"-"`), kondisi ISBN dilewati. Tanpa multi-token tak berurutan, full-text, atau fuzzy. |
 
 Bila menemukan celah baru yang tidak ada di tabel ini: **jangan pilih sendiri**. Tanyakan, lalu tambahkan
 baris OQ baru di sini setelah dijawab.
