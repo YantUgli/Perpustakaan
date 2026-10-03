@@ -23,7 +23,7 @@ from app.services import berkas
 
 _NIK = re.compile(r"[0-9]{16}")  # FR-AKN-03: hanya digit ASCII, sama dengan CHECK di DB
 _SEQUENCE_HABIS = "2200H"  # SQLSTATE sequence_generator_limit_exceeded
-_LABEL = {
+LABEL_ISIAN = {
     "nama": "Nama",
     "alamat": "Alamat",
     "email": "Email",
@@ -44,11 +44,12 @@ class HasilDaftar:
     isi_qr: str
 
 
-def _galat_isian(isian: dict[str, str], rujukan: list[str]) -> GalatBisnis:
+def galat_isian(isian: dict[str, str], rujukan: list[str]) -> GalatBisnis:
+    """422 `AKN_ISIAN_TIDAK_VALID` dengan galat per isian (dipakai pendaftaran & ubah profil)."""
     urut = list(dict.fromkeys(rujukan))  # tanpa duplikat, urutan pertama muncul
     return GalatBisnis(
         kode="AKN_ISIAN_TIDAK_VALID",
-        pesan=f"Periksa isian: {', '.join(_LABEL[k] for k in isian)}.",
+        pesan=f"Periksa isian: {', '.join(LABEL_ISIAN[k] for k in isian)}.",
         rujukan=", ".join(urut),
         status_code=422,
         isian=isian,
@@ -91,7 +92,7 @@ def _periksa_isian(
     }
     for k, v in wajib.items():
         if not v:
-            isian[k] = f"{_LABEL[k]} wajib diisi."
+            isian[k] = f"{LABEL_ISIAN[k]} wajib diisi."
             rujukan.append("FR-AKN-01")
     if nik and not _NIK.fullmatch(nik):
         isian["nik"] = "NIK harus tepat 16 digit angka."
@@ -110,8 +111,23 @@ def _periksa_isian(
             isian["foto"] = g.pesan
             rujukan.append("NFR-SEC-06")
     if isian:
-        raise _galat_isian(isian, rujukan)
+        raise galat_isian(isian, rujukan)
     return gambar
+
+
+def email_terpakai(db: Session, email: str, *, kecuali_anggota_id: int | None = None) -> bool:
+    """FR-AKN-02/08, K-06. ASUMSI(OQ-02, OQ-09): email unik lintas admin & anggota, tak peka
+    huruf. Keunikan terhadap tabel admin hanya dijaga di sini (tak ada constraint DB antartabel).
+    `kecuali_anggota_id`: anggota yang sedang mengubah emailnya sendiri."""
+    email_sama = email.strip().lower()
+    q_anggota = select(Anggota.id).where(func.lower(func.trim(Anggota.email)) == email_sama)
+    if kecuali_anggota_id is not None:
+        q_anggota = q_anggota.where(Anggota.id != kecuali_anggota_id)
+    return (
+        db.scalar(q_anggota) is not None
+        or db.scalar(select(Admin.id).where(func.lower(func.trim(Admin.email)) == email_sama))
+        is not None
+    )
 
 
 def _cari_duplikat(db: Session, *, nik: str, email: str) -> list[str]:
@@ -119,13 +135,7 @@ def _cari_duplikat(db: Session, *, nik: str, email: str) -> list[str]:
     duplikat = []
     if db.scalar(select(Anggota.id).where(Anggota.nik == nik)) is not None:
         duplikat.append("nik")
-    email_sama = email.lower()
-    if (
-        db.scalar(select(Anggota.id).where(func.lower(func.trim(Anggota.email)) == email_sama))
-        is not None
-        or db.scalar(select(Admin.id).where(func.lower(func.trim(Admin.email)) == email_sama))
-        is not None
-    ):
+    if email_terpakai(db, email):
         duplikat.append("email")
     return duplikat
 
