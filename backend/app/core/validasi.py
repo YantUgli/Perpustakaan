@@ -34,5 +34,12 @@ def normalisasi_isbn(isbn: str) -> str:
     return _PEMISAH_ISBN.sub("", isbn).upper()
 
 
+def normalisasi_kode(kode: str) -> str:
+    """Kode anggota/eksemplar yang dipindai atau diketik: trim + huruf besar (decisions.md §B).
+
+    Dipakai sebelum pencocokan dan sebelum cek duplikat keranjang (FR-PJM-07)."""
+    return kode.strip().upper()
+
+
 def isbn_bentuk_valid(isbn: str) -> bool:
     return _BENTUK_ISBN.fullmatch(normalisasi_isbn(isbn)) is not None
