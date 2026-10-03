@@ -28,6 +28,7 @@ warnings.filterwarnings("error", category=Image.DecompressionBombWarning)
 
 _MAGIC = {b"\xff\xd8\xff": "JPEG", b"\x89PNG\r\n\x1a\n": "PNG"}
 _EKSTENSI = {"JPEG": "jpg", "PNG": "png"}
+_MEDIA_TYPE = {"jpg": "image/jpeg", "png": "image/png"}
 _UKURAN_POTONGAN = 64 * 1024
 
 
@@ -98,6 +99,30 @@ def simpan(gambar: GambarSah, subfolder: str) -> str:
     with path.open("xb") as f:  # "x": tidak pernah menimpa berkas yang ada
         f.write(gambar.isi)
     return path_relatif
+
+
+@dataclass(frozen=True)
+class BerkasTersimpan:
+    path: Path
+    media_type: str
+
+
+def berkas_tersimpan(path_relatif: str | None) -> BerkasTersimpan | None:
+    """Berkas yang aman disajikan: ada di disk, di dalam `STORAGE_DIR`, berekstensi buatan server.
+
+    Content-Type diambil dari ekstensi yang dibuat `simpan()`, bukan dari isi permintaan.
+    Selain itu (kosong, di luar folder, hilang, ekstensi asing) → None.
+    """
+    if not path_relatif:
+        return None
+    try:
+        path = _path_absolut(path_relatif)
+    except ValueError:
+        return None
+    media_type = _MEDIA_TYPE.get(path.suffix.lstrip(".").lower())
+    if media_type is None or not path.is_file():
+        return None
+    return BerkasTersimpan(path=path, media_type=media_type)
 
 
 def hapus(path_relatif: str | None) -> None:

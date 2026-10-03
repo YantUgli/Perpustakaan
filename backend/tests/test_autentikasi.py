@@ -302,6 +302,9 @@ ROUTE_PUBLIK = {
     ("GET", "/api/v1/health"),
     ("POST", "/api/v1/auth/login"),  # FR-AKN-05
     ("POST", "/api/v1/auth/logout"),  # FR-AKN-06; idempoten
+    ("GET", "/api/v1/katalog/judul"),  # BR-01, FR-KTL-01/02/04
+    ("GET", "/api/v1/katalog/judul/{judul_id}"),  # BR-01, FR-KTL-03
+    ("GET", "/api/v1/katalog/judul/{judul_id}/cover"),  # BR-01, FR-KTL-01 (cover)
 }
 
 

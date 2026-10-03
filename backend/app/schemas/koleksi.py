@@ -1,4 +1,12 @@
-from pydantic import BaseModel, ConfigDict, StrictInt
+from pydantic import BaseModel, ConfigDict, StrictInt, computed_field
+
+PREFIKS_KATALOG = "/api/v1/katalog/judul"
+
+
+def url_cover(judul_id: int, cover_path: str | None) -> str | None:
+    """URL publik cover (WP 5.3.2). Per judul, bukan per nama berkas: path di disk tak pernah keluar
+    sebagai alamat yang bisa diubah klien."""
+    return f"{PREFIKS_KATALOG}/{judul_id}/cover" if cover_path else None
 
 
 class _DariORM(BaseModel):
@@ -44,7 +52,12 @@ class JudulKeluar(_DariORM):
     tahun: int
     kategori: KategoriKeluar
     harga: int
-    cover_path: str | None  # relatif terhadap STORAGE_DIR; URL publik disediakan WP 5.3.2
+    cover_path: str | None  # relatif terhadap STORAGE_DIR
+
+    @computed_field
+    @property
+    def cover_url(self) -> str | None:
+        return url_cover(self.id, self.cover_path)
 
 
 class HalamanJudul(BaseModel):
