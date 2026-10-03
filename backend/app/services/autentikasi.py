@@ -110,6 +110,17 @@ def login(
     return token, Pengguna(role=role, id=akun.id, nama=akun.nama, email=akun.email)
 
 
+def cabut_sesi_anggota(db: Session, anggota_id: int, *, kecuali_token: str | None) -> None:
+    """ASUMSI(OQ-32): cabut sesi anggota setelah password berubah. `kecuali_token` = sesi perangkat
+    yang sedang dipakai (anggota ganti sendiri); None = semua sesi (admin menetapkan password).
+
+    Tidak commit: dijalankan dalam transaksi yang sama dengan perubahan password."""
+    q = delete(Sesi).where(Sesi.anggota_id == anggota_id)
+    if kecuali_token:
+        q = q.where(Sesi.token_hash != _hash_token(kecuali_token))
+    db.execute(q)
+
+
 def logout(db: Session, token: str | None) -> None:
     """FR-AKN-06: hapus sesi di server. Idempoten: tanpa sesi pun tidak galat."""
     if token:

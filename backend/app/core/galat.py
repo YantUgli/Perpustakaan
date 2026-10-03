@@ -57,6 +57,7 @@ _PESAN_TETAP = {
     "list_type": "Harus berupa daftar.",
     "dict_type": "Format data tidak valid.",
     "model_attributes_type": "Format data tidak valid.",
+    "extra_forbidden": "Isian ini tidak dikenal atau tidak dapat diubah.",  # K-05, NFR-SEC-03
 }
 _PESAN_BATAS = {  # tipe → (kunci ctx, templat); ctx berisi batas skema, bukan masukan pengguna
     "greater_than_equal": ("ge", "Minimal {}."),
