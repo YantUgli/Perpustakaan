@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import butuh_admin, butuh_anggota
 from app.api.v1 import auth, health, katalog
-from app.api.v1.admin import eksemplar, hilang_rusak, koleksi, peminjaman, pengembalian
+from app.api.v1.admin import eksemplar, hilang_rusak, koleksi, peminjaman, pengembalian, tagihan
 
 # NFR-SEC-03: endpoint fitur admin/anggota WAJIB didaftarkan ke router ini, bukan ke `router`.
 # Pemeriksaan role terpasang di tingkat router; test audit route menjaga aturan ini.
@@ -13,6 +13,7 @@ router_admin.include_router(eksemplar.router)
 router_admin.include_router(peminjaman.router)
 router_admin.include_router(pengembalian.router)
 router_admin.include_router(hilang_rusak.router)
+router_admin.include_router(tagihan.router)
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(health.router)
