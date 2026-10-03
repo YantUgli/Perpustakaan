@@ -1,8 +1,10 @@
 """Format Rupiah & normalisasi kode (decisions.md §B; dipakai pesan FR-PJM-03 dan FR-PJM-05/07)."""
 
+from datetime import date
+
 import pytest
 
-from app.core.format import format_rupiah
+from app.core.format import format_rupiah, format_tanggal
 from app.core.validasi import normalisasi_kode
 
 
@@ -27,6 +29,14 @@ def test_format_rupiah_tanpa_spasi_titik_ribuan(nominal, teks):
 def test_format_rupiah_hanya_int_tidak_negatif(salah):
     with pytest.raises((TypeError, ValueError)):
         format_rupiah(salah)
+
+
+@pytest.mark.parametrize(
+    ("tanggal", "teks"),
+    [(date(2026, 10, 1), "01/10/2026"), (date(2027, 12, 31), "31/12/2027")],
+)
+def test_format_tanggal_dd_mm_yyyy(tanggal, teks):
+    assert format_tanggal(tanggal) == teks
 
 
 @pytest.mark.parametrize(
