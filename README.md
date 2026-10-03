@@ -52,6 +52,16 @@ npm run dev                                  # http://localhost:3000
 > ⚠ Server produksi **wajib** `APP_ENV=production` (nilai sah: `dev` | `staging` | `production`).
 > Produksi hanya di-seed akun admin (OQ-15). Admin lupa password → jalankan seed admin dengan email lain (OQ-14).
 
+## Alamat (dev)
+
+| Layanan    | URL                                 |
+| ---------- | ----------------------------------- |
+| Frontend   | http://localhost:3000               |
+| Backend    | http://localhost:8000               |
+| API Docs   | http://localhost:8000/api/v1/docs   |
+| Health     | http://localhost:8000/api/v1/health |
+| PostgreSQL | 127.0.0.1:5434                      |
+
 ## Pemeriksaan sebelum merge
 
 ```bash
@@ -66,3 +76,11 @@ npm test && npm run lint && npm run format:check && npm run build
 
 Perubahan skema selalu lewat migration **baru** (`uv run alembic revision --autogenerate -m "<pesan>"`,
 lalu periksa isinya); migration yang sudah di-commit tidak diedit.
+
+## Menghentikan
+
+```bash
+# backend / frontend: Ctrl+C di terminal masing-masing
+docker compose down        # hentikan DB (data tetap tersimpan)
+docker compose down -v     # hentikan DB + hapus seluruh data
+```
