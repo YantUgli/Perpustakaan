@@ -31,6 +31,15 @@ class StatusItem(StrEnum):
     RUSAK = "RUSAK"
 
 
+# Label UI item persis seperti IR-UI-03 (`Terlambat` turunan, bukan status tersimpan).
+LABEL_STATUS_ITEM = {
+    StatusItem.DIPINJAM: "Dipinjam",
+    StatusItem.DIKEMBALIKAN: "Dikembalikan",
+    StatusItem.HILANG: "Hilang",
+    StatusItem.RUSAK: "Rusak",
+}
+
+
 class StatusTransaksi(StrEnum):
     AKTIF = "AKTIF"
     SELESAI = "SELESAI"

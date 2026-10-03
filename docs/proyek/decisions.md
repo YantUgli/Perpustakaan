@@ -48,6 +48,7 @@ Bila dokumen desain final dari SA/DE sudah ada, **dokumen itu yang dipakai** dan
 | Daftar berhalaman | `halaman` ≥ 1, `per_halaman` 1–100 (default 20); urutan judul A–Z (`lower(judul)`) lalu `id`. Sama untuk katalog publik dan daftar judul admin. Halaman di luar jangkauan → `data` kosong |
 | Cover publik | `GET /api/v1/katalog/judul/{id}/cover` hanya menyajikan `cover_path` milik judul itu dari DB (tak pernah nama/path dari klien), path wajib di dalam `STORAGE_DIR`, Content-Type dari ekstensi buatan server. Tanpa cover / berkas hilang → 404. Foto anggota **tidak** disajikan publik |
 | Kode yang dipindai/diketik | Kode anggota & eksemplar di-`trim` lalu dijadikan huruf besar **sebelum** dicocokkan dan sebelum cek duplikat (FR-PJM-07): `" eks-000012 "` = `EKS-000012`. Berlaku untuk kode tunggal, isi keranjang, dan body konfirmasi (`normalisasi_kode()` di `app/core/validasi.py`) |
+| Rusak saat buku diserahkan (FR-HLR-02) | Tidak ada endpoint pencarian berbasis eksemplar. Alur: pindai eksemplar → pratinjau pengembalian (dapat kode peminjam) → daftar item hilang-rusak anggota (memuat `kode_eksemplar`) → pilih item |
 | Format Rupiah di pesan | `Rp35.555`: tanpa spasi, titik pemisah ribuan, masukan `int` (`format_rupiah()` di `app/core/format.py`) |
 | Batas permintaan eksemplar | Tambah eksemplar **1–100** per permintaan; data label **1–200** id per permintaan. Pesan penolakan menyebut batasnya |
 | Ekspor | PDF dan `.xlsx` dibuat di backend (mis. `openpyxl` untuk Excel) |
@@ -85,6 +86,8 @@ Pakai default ini dan tandai di kode `ASUMSI(OQ-xx)`. Konfirmasi ke BA/SA sebelu
 | OQ-23 | Judul tanpa eksemplar, atau semua eksemplarnya Hilang/Rusak — tampil di katalog? | **Tetap tampil** sebagai "0 dari 0" dengan daftar rak kosong (SRS tidak memuat aturan menyembunyikan). |
 | OQ-24 | Bentuk pencarian katalog (FR-KTL-02, IR-UI-05). | Satu kata kunci, dicocokkan sebagai satu frasa substring (`ILIKE '%q%'`, wildcard di-escape) ke judul, penulis, ISBN ternormalisasi (OQ-13), dan nama kategori, digabung OR. Bila kata kunci ternormalisasi untuk ISBN kosong (mis. `"-"`), kondisi ISBN dilewati. Tanpa multi-token tak berurutan, full-text, atau fuzzy. |
 | OQ-25 | Asal `tanggal_kembali` (FR-KMB-05 hanya "mencatat tanggal kembali") dan nominal denda bila pratinjau & konfirmasi berbeda hari. | `tanggal_kembali` selalu `hari_ini_wib()` saat konfirmasi; **tanpa** isian manual atau tanggal mundur (Brief §6.3; sejajar FR-PJM-11). Pratinjau bersifat informasi; nominal final dihitung dari `tanggal_kembali` saat konfirmasi (FR-DND-01) dengan harga judul saat itu, dan dikembalikan di respons konfirmasi. |
+| OQ-26 | Asal & batas `tanggal_kejadian` hilang/rusak (FR-HLR-03 hanya "menyimpan tanggal kejadian"). | Wajib diisi admin; `tanggal_pinjam ≤ tanggal_kejadian ≤ hari_ini_wib()` (kedua batas inklusif); pesan penolakan menyebut batas dalam `DD/MM/YYYY`. `tanggal_kejadian` hanya dicatat; tidak memengaruhi nominal tagihan maupun perhitungan apa pun (BR-15: tanpa denda). |
+| OQ-27 | `tanggal_dibentuk` tagihan Penggantian. | Hari ini WIB (tanggal pencatatan), bukan `tanggal_kejadian`; konsisten dengan OQ-11 dan OQ-25. |
 
 Bila menemukan celah baru yang tidak ada di tabel ini: **jangan pilih sendiri**. Tanyakan, lalu tambahkan
 baris OQ baru di sini setelah dijawab.
