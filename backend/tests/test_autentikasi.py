@@ -300,6 +300,7 @@ def test_NFR_SEC_03_role_yang_benar_diterima_200(klien_rute_uji, db):
 # Endpoint publik yang sah. Menambah endpoint publik = tambah di sini dengan rujukan SRS.
 ROUTE_PUBLIK = {
     ("GET", "/api/v1/health"),
+    ("POST", "/api/v1/auth/daftar"),  # FR-AKN-01..04 (UC-05 Pengunjung)
     ("POST", "/api/v1/auth/login"),  # FR-AKN-05
     ("POST", "/api/v1/auth/logout"),  # FR-AKN-06; idempoten
     ("GET", "/api/v1/katalog/judul"),  # BR-01, FR-KTL-01/02/04

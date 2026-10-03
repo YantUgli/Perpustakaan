@@ -1,4 +1,4 @@
-"""Unggahan gambar (cover; nanti foto anggota WP 5.3.3): NFR-SEC-06.
+"""Unggahan gambar (cover WP 5.3.5, foto anggota WP 5.3.3): NFR-SEC-06.
 
 - Jenis ditentukan dari **isi** (magic bytes + dekode penuh Pillow), bukan nama/Content-Type.
 - Nama berkas di disk dibuat server (UUID + ekstensi format terdeteksi); nama klien diabaikan.
@@ -42,7 +42,7 @@ def _galat(kode: str, pesan: str) -> GalatBisnis:
     return GalatBisnis(kode=kode, pesan=pesan, rujukan="NFR-SEC-06", status_code=422)
 
 
-def _baca_terbatas(berkas: BinaryIO, maks: int) -> bytes:
+def _baca_terbatas(berkas: BinaryIO, maks: int, prefiks: str) -> bytes:
     """Baca paling banyak `maks + 1` byte; lebih dari `maks` → ditolak tanpa membaca sisanya."""
     potongan, total = [], 0
     while total <= maks:
@@ -52,30 +52,34 @@ def _baca_terbatas(berkas: BinaryIO, maks: int) -> bytes:
         potongan.append(data)
         total += len(data)
     if total > maks:
-        raise _galat("BKU_COVER_TERLALU_BESAR", "Ukuran berkas melebihi batas 2 MB.")
+        raise _galat(f"{prefiks}_TERLALU_BESAR", "Ukuran berkas melebihi batas 2 MB.")
     return b"".join(potongan)
 
 
-def periksa_gambar(berkas: BinaryIO, *, label: str = "Cover") -> GambarSah:
-    """NFR-SEC-06: JPG/PNG, ≤ 2 MB, dapat didekode utuh, resolusi ≤ BATAS_PIKSEL."""
-    isi = _baca_terbatas(berkas, UKURAN_MAKS_GAMBAR)
+def periksa_gambar(
+    berkas: BinaryIO, *, label: str = "Cover", prefiks: str = "BKU_COVER"
+) -> GambarSah:
+    """NFR-SEC-06: JPG/PNG, ≤ 2 MB, dapat didekode utuh, resolusi ≤ BATAS_PIKSEL.
+
+    Kode galat `<prefiks>_*`: cover `BKU_COVER_*` (kontrak 5.3.5), foto anggota `AKN_FOTO_*`."""
+    isi = _baca_terbatas(berkas, UKURAN_MAKS_GAMBAR, prefiks)
     format_magic = next((f for m, f in _MAGIC.items() if isi.startswith(m)), None)
     if format_magic is None:
-        raise _galat("BKU_COVER_FORMAT", f"{label} harus berupa gambar JPG atau PNG.")
+        raise _galat(f"{prefiks}_FORMAT", f"{label} harus berupa gambar JPG atau PNG.")
     try:
         with Image.open(io.BytesIO(isi)) as img:
             if img.format != format_magic:
-                raise _galat("BKU_COVER_FORMAT", f"{label} harus berupa gambar JPG atau PNG.")
+                raise _galat(f"{prefiks}_FORMAT", f"{label} harus berupa gambar JPG atau PNG.")
             if img.width * img.height > BATAS_PIKSEL:
                 raise Image.DecompressionBombError
             img.load()  # dekode penuh: berkas terpotong/rusak gagal di sini
     except (Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
         raise _galat(
-            "BKU_COVER_RESOLUSI",
+            f"{prefiks}_RESOLUSI",
             f"Resolusi gambar terlalu besar (maksimal {BATAS_PIKSEL // 1_000_000} megapiksel).",
         ) from exc
     except (UnidentifiedImageError, OSError, SyntaxError, ValueError) as exc:
-        raise _galat("BKU_COVER_RUSAK", "Berkas gambar rusak atau tidak dapat dibaca.") from exc
+        raise _galat(f"{prefiks}_RUSAK", "Berkas gambar rusak atau tidak dapat dibaca.") from exc
     return GambarSah(isi=isi, ekstensi=_EKSTENSI[format_magic])
 
 
