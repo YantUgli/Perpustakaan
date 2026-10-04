@@ -7,6 +7,7 @@ from app.api.v1.admin import (
     eksemplar,
     hilang_rusak,
     koleksi,
+    laporan,
     peminjaman,
     pengembalian,
     tagihan,
@@ -24,6 +25,7 @@ router_admin.include_router(pengembalian.router)
 router_admin.include_router(hilang_rusak.router)
 router_admin.include_router(tagihan.router)
 router_admin.include_router(admin_anggota.router)
+router_admin.include_router(laporan.router)
 router_anggota.include_router(profil.router)
 router_anggota.include_router(area.router)
 
