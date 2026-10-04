@@ -61,6 +61,18 @@ class CaraPenyelesaian(StrEnum):
     BUKU_PENGGANTI = "BUKU_PENGGANTI"
 
 
+# Label UI tagihan persis seperti IR-UI-03 / domain-rules §2; dipakai berkas ekspor (FR-LAP-04).
+LABEL_STATUS_TAGIHAN = {StatusTagihan.BELUM_LUNAS: "Belum Lunas", StatusTagihan.LUNAS: "Lunas"}
+LABEL_JENIS_TAGIHAN = {JenisTagihan.DENDA: "Denda", JenisTagihan.PENGGANTIAN: "Penggantian"}
+LABEL_CARA_PENYELESAIAN = {
+    CaraPenyelesaian.TUNAI: "Tunai",
+    CaraPenyelesaian.TRANSFER: "Transfer",
+    CaraPenyelesaian.BUKU_PENGGANTI: "Buku Pengganti",
+}
+# Kondisi turunan (FR-DND-05), hanya label tampilan — tidak pernah disimpan.
+LABEL_TERLAMBAT = "Terlambat"
+
+
 class Role(StrEnum):
     """Dua role terautentikasi (BR-02). Pengunjung umum bukan role."""
 
