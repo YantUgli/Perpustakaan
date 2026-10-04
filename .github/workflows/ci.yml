@@ -1,0 +1,70 @@
+# CI: perintah sama dengan bagian "Perintah" di CLAUDE.md (decisions.md §B baris "CI").
+# Tanpa secret: kredensial DB di bawah hanya untuk container sekali pakai, sama dengan docker-compose.yml.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_USER: perpustakaan
+          POSTGRES_PASSWORD: perpustakaan
+          POSTGRES_DB: perpustakaan
+          TZ: Asia/Jakarta
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U perpustakaan -d perpustakaan"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://perpustakaan:perpustakaan@127.0.0.1:5434/perpustakaan
+      DATABASE_URL_TEST: postgresql+psycopg://perpustakaan:perpustakaan@127.0.0.1:5434/perpustakaan_test
+      APP_ENV: dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.22"
+      - name: Buat database test (sama dengan infra/postgres/init)
+        run: psql "postgresql://perpustakaan:perpustakaan@127.0.0.1:5434/perpustakaan" -v ON_ERROR_STOP=1 -f ../infra/postgres/init/01-db-test.sql
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run alembic upgrade head
+      - run: uv run alembic check
+      - run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
