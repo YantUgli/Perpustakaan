@@ -97,7 +97,7 @@ def tambah(db: Session, *, judul_id: int, jumlah: int, rak_id: int) -> list[Ekse
             "BKU_KODE_EKSEMPLAR_HABIS",
             "Kode eksemplar sudah habis (maksimal EKS-999999); "
             "tidak ada eksemplar yang ditambahkan.",
-            "OQ-03",
+            "FR-BKU-04",
             409,
         ) from exc
     return list(

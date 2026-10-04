@@ -333,6 +333,35 @@ def test_balapan_duplikat_kategori_rak_isbn_diterjemahkan_ke_409(klien_admin, db
         assert "duplicate key" not in teks and "uq_" not in teks
 
 
+# ----------------------------------------------------------------------------- rujukan galat
+
+
+def test_FR_BKU_01_rujukan_kategori_kosong(klien_admin):
+    d = _galat(klien_admin.post(f"{API}/kategori", json={"nama": " "}), 422, "BKU_ISIAN_KOSONG")
+    assert d["rujukan"] == "FR-BKU-01"
+
+
+def test_FR_BKU_01_rujukan_rak_kosong(klien_admin):
+    d = _galat(klien_admin.post(f"{API}/rak", json={"kode": " "}), 422, "BKU_ISIAN_KOSONG")
+    assert d["rujukan"] == "FR-BKU-01"
+
+
+def test_FR_BKU_02_rujukan_judul_kosong(klien_admin, db):
+    r = klien_admin.post(f"{API}/judul", json=_judul_json(db, judul=" "))
+    assert _galat(r, 422, "BKU_ISIAN_KOSONG")["rujukan"] == "FR-BKU-02"
+
+
+def test_FR_BKU_02_rujukan_isbn_duplikat(klien_admin, db):
+    pabrik.judul(db, isbn="9786020312345")
+    r = klien_admin.post(f"{API}/judul", json=_judul_json(db, isbn="978-602-03-1234-5"))
+    assert _galat(r, 409, "BKU_ISBN_DUPLIKAT")["rujukan"] == "FR-BKU-02"
+
+
+def test_FR_BKU_02_rujukan_isbn_bentuk(klien_admin, db):
+    r = klien_admin.post(f"{API}/judul", json=_judul_json(db, isbn="12345"))
+    assert _galat(r, 422, "BKU_ISBN_BENTUK")["rujukan"] == "FR-BKU-02"
+
+
 def test_balapan_hapus_yang_dipakai_diterjemahkan_ke_409(klien_admin, db, monkeypatch):
     monkeypatch.setattr(koleksi, "_jumlah_judul_kategori", lambda *a, **k: 0)
     monkeypatch.setattr(koleksi, "_jumlah_eksemplar_rak", lambda *a, **k: 0)
