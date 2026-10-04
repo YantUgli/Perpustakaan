@@ -5,12 +5,13 @@
 | Cabang | Isi | Aturan |
 |---|---|---|
 | `main` | Versi stabil, siap dipasang ke staging/produksi | Hanya menerima merge dari `develop` (rilis) atau `hotfix/*`. Tidak ada commit langsung. |
-| `develop` | Integrasi WP yang sudah selesai | Menerima merge dari `wp/*` setelah review. |
+| `develop` | Integrasi WP yang sudah selesai | Menerima merge dari `wp/*` dan `chore/*` setelah review. |
 | `wp/<kode>-<slug>` | Satu paket kerja WBS, misal `wp/5.3.8-peminjaman` | Dibuat dari `develop`. Satu WP = satu cabang (sesuai aturan "satu sesi = satu WP"). |
+| `chore/<slug>` | Tugas kecil di luar WP (perapian, catatan, CI), misal `chore/ci` | Dibuat dari `develop`. Satu tugas = satu cabang. Jenis commit `chore`, `docs`, atau `fix`. |
 | `hotfix/<slug>` | Perbaikan mendesak di produksi | Dibuat dari `main`, di-merge ke `main` **dan** `develop`. |
 
-Syarat merge `wp/*` → `develop`: definisi selesai WP terpenuhi
-(test lulus, lint bersih, `progress.md` diperbarui) dan direview minimal satu anggota tim lain.
+Syarat merge `wp/*` atau `chore/*` → `develop`: definisi selesai terpenuhi
+(test lulus, lint bersih, `progress.md` diperbarui bila relevan) dan direview minimal satu anggota tim lain.
 
 ## Pesan commit
 
