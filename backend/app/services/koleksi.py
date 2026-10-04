@@ -49,13 +49,13 @@ def _commit(db: Session, terjemahan: dict[str, GalatBisnis]) -> None:
         raise galat from exc
 
 
-def _wajib_isi(**isian: str | None) -> dict[str, str]:
-    """ASUMSI(OQ-10): isian wajib di-trim dan tidak boleh kosong."""
+def _wajib_isi(rujukan: str, **isian: str | None) -> dict[str, str]:
+    """ASUMSI(OQ-10): isian wajib di-trim dan tidak boleh kosong. `rujukan` = FR pemanggil."""
     hasil = {k: (v or "").strip() for k, v in isian.items()}
     kosong = [k for k, v in hasil.items() if not v]
     if kosong:
         raise _tidak_valid(
-            "BKU_ISIAN_KOSONG", f"Isian wajib belum diisi: {', '.join(kosong)}.", "OQ-10"
+            "BKU_ISIAN_KOSONG", f"Isian wajib belum diisi: {', '.join(kosong)}.", rujukan
         )
     return hasil
 
@@ -101,7 +101,7 @@ def daftar_kategori(db: Session) -> list[Kategori]:
 
 def simpan_kategori(db: Session, *, nama: str, kategori_id: int | None = None) -> Kategori:
     """FR-BKU-01: tambah (kategori_id None) atau ubah kategori."""
-    nama = _wajib_isi(nama=nama)["nama"]
+    nama = _wajib_isi("FR-BKU-01", nama=nama)["nama"]
     k = Kategori() if kategori_id is None else _kategori(db, kategori_id)
     if _kategori_bernama(db, nama, kecuali_id=kategori_id) is not None:
         raise _galat_kategori_duplikat(nama)
@@ -167,7 +167,7 @@ def daftar_rak(db: Session) -> list[Rak]:
 
 def simpan_rak(db: Session, *, kode: str, lokasi: str | None, rak_id: int | None = None) -> Rak:
     """FR-BKU-01: tambah (rak_id None) atau ubah rak. ASUMSI(OQ-08): kode wajib, lokasi opsional."""
-    kode = _wajib_isi(kode=kode)["kode"]
+    kode = _wajib_isi("FR-BKU-01", kode=kode)["kode"]
     r = Rak() if rak_id is None else _rak(db, rak_id)
     if _rak_berkode(db, kode, kecuali_id=rak_id) is not None:
         raise _galat_rak_duplikat(kode)
@@ -212,7 +212,7 @@ class DataJudul:
 
 def _galat_isbn_duplikat(isbn: str, judul_pemilik: str) -> GalatBisnis:
     return _konflik(
-        "BKU_ISBN_DUPLIKAT", f"ISBN {isbn} sudah dipakai oleh judul '{judul_pemilik}'.", "OQ-13"
+        "BKU_ISBN_DUPLIKAT", f"ISBN {isbn} sudah dipakai oleh judul '{judul_pemilik}'.", "FR-BKU-02"
     )
 
 
@@ -269,14 +269,14 @@ def simpan_judul(db: Session, data: DataJudul, *, judul_id: int | None = None) -
     """FR-BKU-02: tambah (judul_id None) atau ubah judul. Harga hanya di judul (FR-BKU-03);
     tagihan yang sudah terbentuk tidak dihitung ulang (nominal tersimpan, SRS 7.1)."""
     isian = _wajib_isi(
-        isbn=data.isbn, judul=data.judul, penulis=data.penulis, penerbit=data.penerbit
+        "FR-BKU-02", isbn=data.isbn, judul=data.judul, penulis=data.penulis, penerbit=data.penerbit
     )
     if not isbn_bentuk_valid(isian["isbn"]):  # ASUMSI(OQ-18)
         raise _tidak_valid(
             "BKU_ISBN_BENTUK",
             "ISBN harus 10 karakter (9 angka diikuti angka atau X) atau 13 angka; "
             "tanda hubung dan spasi diabaikan.",
-            "OQ-18",
+            "FR-BKU-02",
         )
     if data.tahun <= 0:  # ASUMSI(OQ-10)
         raise _tidak_valid("BKU_TAHUN_TIDAK_VALID", "Tahun terbit harus lebih dari 0.", "DR-05")

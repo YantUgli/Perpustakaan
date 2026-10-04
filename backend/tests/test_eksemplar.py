@@ -110,6 +110,12 @@ def test_NFR_REL_01_tambah_n_eksemplar_atomik_gagal_di_tengah_tidak_ada_yang_ter
     assert _jumlah(db, Eksemplar) == 0
 
 
+def test_FR_BKU_04_rujukan_kode_eksemplar_habis(klien_admin, db, sequence_hampir_habis):
+    j, rak = pabrik.judul(db), pabrik.rak(db)
+    r = klien_admin.post(f"{API}/judul/{j.id}/eksemplar", json={"jumlah": 3, "rak_id": rak.id})
+    assert _galat(r, 409, "BKU_KODE_EKSEMPLAR_HABIS")["rujukan"] == "FR-BKU-04"
+
+
 # --------------------------------------------------------------------------- rak (FR-BKU-05)
 
 
