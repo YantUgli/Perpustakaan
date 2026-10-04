@@ -11,7 +11,7 @@ from app.api.v1.admin import (
     pengembalian,
     tagihan,
 )
-from app.api.v1.anggota import profil
+from app.api.v1.anggota import area, profil
 
 # NFR-SEC-03: endpoint fitur admin/anggota WAJIB didaftarkan ke router ini, bukan ke `router`.
 # Pemeriksaan role terpasang di tingkat router; test audit route menjaga aturan ini.
@@ -25,6 +25,7 @@ router_admin.include_router(hilang_rusak.router)
 router_admin.include_router(tagihan.router)
 router_admin.include_router(admin_anggota.router)
 router_anggota.include_router(profil.router)
+router_anggota.include_router(area.router)
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(health.router)
