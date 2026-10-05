@@ -4,7 +4,7 @@
  * tetap dari backend. Pesan validasi sama dengan backend (`services/anggota.py`, `core/validasi.py`).
  */
 import { halamanDariParam } from "./halaman";
-import { PANJANG_MIN_PASSWORD, validasiProfil, wajibDiisi } from "./validasi-akun";
+import { PANJANG_MIN_PASSWORD, PESAN_AKUN, validasiProfil, wajibDiisi } from "./validasi-akun";
 
 type Param = string | string[] | undefined;
 
@@ -96,4 +96,150 @@ export function bodyRak(n: { kode: string; lokasi: string }): {
   lokasi: string | null;
 } {
   return { kode: n.kode.trim(), lokasi: n.lokasi.trim() || null };
+}
+
+// ---- Judul & eksemplar (bagian B) ----
+
+export const UKURAN_MAKS_COVER = 2 * 1024 * 1024; // NFR-SEC-06: 2.097.152 byte, tepat 2 MB diterima
+const JENIS_COVER = new Set(["image/jpeg", "image/png"]);
+const POLA_BULAT = /^[0-9]+$/;
+
+/**
+ * Bilangan bulat tak negatif dari teks isian; selain itu `null`. Sengaja tanpa fungsi parse desimal:
+ * pecahan, koma, titik ribuan, dan notasi ilmiah ditolak, bukan dibulatkan (uang = int Rupiah, DR-05).
+ */
+export function bacaBulat(teks: string): number | null {
+  const t = teks.trim();
+  if (!POLA_BULAT.test(t)) return null;
+  const n = Number(t);
+  return Number.isSafeInteger(n) ? n : null;
+}
+
+export type NilaiJudul = {
+  isbn: string;
+  judul: string;
+  penulis: string;
+  penerbit: string;
+  tahun: string;
+  kategori_id: string;
+  harga: string;
+};
+
+const PESAN_JUDUL = {
+  kategori: "Pilih kategori.",
+  tahunBulat: "Tahun harus berupa bilangan bulat.",
+  hargaBulat: "Harga harus berupa bilangan bulat Rupiah tanpa titik atau koma.",
+  coverFormat: "Cover harus berupa gambar JPG atau PNG.",
+} as const;
+
+/**
+ * FR-BKU-02, DR-05, NFR-SEC-06: umpan cepat sebelum kirim. Aturan harga (> 0), tahun, bentuk ISBN
+ * (OQ-18), dan isi berkas diputuskan backend. Cover diperiksa SEBELUM judul dibuat agar tidak ada judul
+ * setengah jadi karena berkas yang jelas salah.
+ */
+export function validasiJudul(n: NilaiJudul, cover: File | null): Record<string, string> {
+  const galat: Record<string, string> = {};
+  const wajib = [
+    ["isbn", "ISBN"],
+    ["judul", "Judul"],
+    ["penulis", "Penulis"],
+    ["penerbit", "Penerbit"],
+  ] as const;
+  for (const [k, label] of wajib) {
+    if (!n[k].trim()) galat[k] = wajibDiisi(label);
+  }
+  if (!n.tahun.trim()) galat.tahun = wajibDiisi("Tahun");
+  else if (bacaBulat(n.tahun) === null) galat.tahun = PESAN_JUDUL.tahunBulat;
+  if (!n.kategori_id.trim()) galat.kategori_id = PESAN_JUDUL.kategori;
+  if (!n.harga.trim()) galat.harga = wajibDiisi("Harga");
+  else if (bacaBulat(n.harga) === null) galat.harga = PESAN_JUDUL.hargaBulat;
+
+  if (cover) {
+    if (cover.size > UKURAN_MAKS_COVER) {
+      galat.cover = PESAN_AKUN.fotoTerlaluBesar;
+    } else if (cover.type && !JENIS_COVER.has(cover.type)) {
+      // Seperti foto anggota (P3): tahan hanya bila jenis diketahui; jenis kosong → backend memeriksa isi.
+      galat.cover = PESAN_JUDUL.coverFormat;
+    }
+  }
+  return galat;
+}
+
+/** Body `POST/PUT /admin/judul`: tahun, kategori, dan harga bertipe integer (backend `StrictInt`). */
+export function bodyJudul(n: NilaiJudul): {
+  isbn: string;
+  judul: string;
+  penulis: string;
+  penerbit: string;
+  tahun: number;
+  kategori_id: number;
+  harga: number;
+} {
+  const tahun = bacaBulat(n.tahun);
+  const kategori = bacaBulat(n.kategori_id);
+  const harga = bacaBulat(n.harga);
+  if (tahun === null || kategori === null || harga === null) {
+    throw new Error("bodyJudul dipanggil sebelum validasiJudul lulus");
+  }
+  return {
+    isbn: n.isbn.trim(),
+    judul: n.judul.trim(),
+    penulis: n.penulis.trim(),
+    penerbit: n.penerbit.trim(),
+    tahun,
+    kategori_id: kategori,
+    harga,
+  };
+}
+
+/** Judul sudah tersimpan tetapi unggah cover gagal; `pesan` backend apa adanya (IR-UI-04). */
+export function pesanCoverGagal(pesan: string): string {
+  return `Judul tersimpan, tetapi cover gagal diunggah: ${pesan}`;
+}
+
+/** FR-BKU-04: batas jumlah (1–100) dan keberadaan rak diputuskan backend. */
+export function validasiTambahEksemplar(n: {
+  jumlah: string;
+  rak_id: string;
+}): Record<string, string> {
+  const galat: Record<string, string> = {};
+  if (!n.jumlah.trim()) galat.jumlah = "Jumlah eksemplar wajib diisi.";
+  else if (bacaBulat(n.jumlah) === null)
+    galat.jumlah = "Jumlah eksemplar harus berupa bilangan bulat.";
+  if (!n.rak_id.trim()) galat.rak_id = "Pilih rak.";
+  return galat;
+}
+
+export function bodyTambahEksemplar(n: { jumlah: string; rak_id: string }): {
+  jumlah: number;
+  rak_id: number;
+} {
+  const jumlah = bacaBulat(n.jumlah);
+  const rak = bacaBulat(n.rak_id);
+  if (jumlah === null || rak === null) {
+    throw new Error("bodyTambahEksemplar dipanggil sebelum validasiTambahEksemplar lulus");
+  }
+  return { jumlah, rak_id: rak };
+}
+
+/** OQ-20: konfirmasi sebelum simpan, karena eksemplar tidak dapat dihapus (mitigasi salah input). */
+export function teksKonfirmasiTambah(n: { jumlah: number; judul: string; rak: string }): string {
+  return `Tambahkan ${n.jumlah} eksemplar untuk judul "${n.judul}" di rak ${n.rak}? Eksemplar tidak dapat dihapus setelah ditambahkan.`;
+}
+
+/** FR-BKU-04: kode dari respons API (urut kode), bukan dihitung klien. */
+export function pesanSuksesTambah(kode: string[]): string {
+  const rentang = kode.length > 1 ? `${kode[0]} s.d. ${kode[kode.length - 1]}` : kode[0];
+  return `${kode.length} eksemplar ditambahkan: ${rentang}.`;
+}
+
+/**
+ * FR-BKU-07/08, K-02: aksi manual yang ditawarkan per status eksemplar (dibaca dari field `status`; backend
+ * tetap menolak transisi yang tidak sah). Hanya Tersedia → Rusak. Dipinjam berubah lewat sirkulasi;
+ * Hilang/Rusak tidak punya jalan kembali (tanpa "pulihkan", domain-rules §3).
+ */
+export function aksiEksemplar(status: string): { tandaiRusak: boolean; keterangan: string | null } {
+  if (status === "TERSEDIA") return { tandaiRusak: true, keterangan: null };
+  if (status === "DIPINJAM") return { tandaiRusak: false, keterangan: "Diubah lewat sirkulasi" };
+  return { tandaiRusak: false, keterangan: null };
 }

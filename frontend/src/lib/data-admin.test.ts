@@ -1,14 +1,27 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import {
+  UKURAN_MAKS_COVER,
+  aksiEksemplar,
+  bacaBulat,
+  bodyJudul,
   bodyKategori,
   bodyRak,
+  bodyTambahEksemplar,
   bodyUbahAnggota,
   filterAnggotaDariParam,
+  pesanCoverGagal,
+  pesanSuksesTambah,
   pesanSuksesUbahAnggota,
   queryAnggota,
+  teksKonfirmasiTambah,
+  validasiJudul,
   validasiKategori,
   validasiRak,
+  validasiTambahEksemplar,
   validasiUbahAnggota,
 } from "./data-admin";
 
@@ -114,5 +127,168 @@ describe("Kategori & rak (FR-BKU-01, DR-03/04, OQ-08)", () => {
       kode: "R-02",
       lokasi: "Lantai 2",
     });
+  });
+});
+
+const JUDUL = {
+  isbn: "978-602-03-1234-5",
+  judul: "Langit yang Sama",
+  penulis: "Sari Dewi",
+  penerbit: "Penerbit Nusa",
+  tahun: "2020",
+  kategori_id: "3",
+  harga: "98000",
+};
+const berkas = (ukuran: number, type = "image/png") => {
+  const f = new File(["x"], "c.png", { type });
+  Object.defineProperty(f, "size", { value: ukuran });
+  return f;
+};
+
+describe("bacaBulat: integer murni tanpa parseFloat (DR-05)", () => {
+  it.each([
+    ["98000", 98000],
+    [" 2020 ", 2020],
+    ["0", 0],
+    ["0098", 98],
+  ])("DR_05_bacaBulat('%s') = %s", (teks, hasil) => {
+    expect(bacaBulat(teks)).toBe(hasil);
+  });
+
+  it.each(["", "  ", "98.000", "98000,5", "9.8e4", "1e3", "-5", "+5", "12abc", "NaN", "0x10", "٣"])(
+    "DR_05_bacaBulat('%s') ditahan (null)",
+    (teks) => {
+      expect(bacaBulat(teks)).toBeNull();
+    },
+  );
+
+  it("DR_05_bilangan_melebihi_batas_aman_ditahan", () => {
+    expect(bacaBulat("9007199254740993")).toBeNull();
+  });
+});
+
+describe("Form judul (FR-BKU-02, FR-BKU-03, DR-05, NFR-SEC-06)", () => {
+  it("FR_BKU_02_judul_sah_tanpa_galat", () => {
+    expect(validasiJudul(JUDUL, null)).toEqual({});
+  });
+
+  it.each(["isbn", "judul", "penulis", "penerbit"] as const)(
+    "FR_BKU_02_%s_kosong_wajib (teks spasi dianggap kosong)",
+    (isian) => {
+      expect(validasiJudul({ ...JUDUL, [isian]: "  " }, null)[isian]).toMatch(/ wajib diisi\.$/);
+    },
+  );
+
+  it("FR_BKU_02_kategori_wajib_dipilih", () => {
+    expect(validasiJudul({ ...JUDUL, kategori_id: "" }, null).kategori_id).toBe("Pilih kategori.");
+  });
+
+  it("DR_05_tahun_dan_harga_wajib_bulat; pecahan, koma, titik ribuan ditahan", () => {
+    const g = validasiJudul({ ...JUDUL, tahun: "20.20", harga: "98.000" }, null);
+    expect(g.tahun).toBe("Tahun harus berupa bilangan bulat.");
+    expect(g.harga).toBe("Harga harus berupa bilangan bulat Rupiah tanpa titik atau koma.");
+    expect(validasiJudul({ ...JUDUL, harga: "" }, null).harga).toBe("Harga wajib diisi.");
+    expect(validasiJudul({ ...JUDUL, tahun: "" }, null).tahun).toBe("Tahun wajib diisi.");
+  });
+
+  it("DR_05_harga_nol_atau_negatif_diserahkan_ke_backend (klien tidak memutuskan aturan harga)", () => {
+    expect(validasiJudul({ ...JUDUL, harga: "0" }, null).harga).toBeUndefined();
+  });
+
+  it("DR_05_harga_tahun_dikirim_integer: body bertipe number bulat, bukan teks", () => {
+    const b = bodyJudul({ ...JUDUL, isbn: " 978 ", harga: " 98000 " });
+    expect(b).toEqual({
+      isbn: "978",
+      judul: "Langit yang Sama",
+      penulis: "Sari Dewi",
+      penerbit: "Penerbit Nusa",
+      tahun: 2020,
+      kategori_id: 3,
+      harga: 98000,
+    });
+    for (const k of ["tahun", "kategori_id", "harga"] as const) {
+      expect(typeof b[k]).toBe("number");
+      expect(Number.isInteger(b[k])).toBe(true);
+    }
+  });
+
+  it("DR_05_tanpa_parseFloat_di_kode_klien_judul (uang tidak boleh lewat float)", () => {
+    for (const rel of ["./data-admin.ts", "../app/admin/judul/FormJudul.tsx"]) {
+      const sumber = readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
+      expect(sumber).not.toMatch(/parseFloat|parseInt|Number\.parseFloat/);
+    }
+  });
+
+  it("NFR_SEC_06_cover_tepat_2_MB_boleh; lebih 1 byte ditahan", () => {
+    expect(UKURAN_MAKS_COVER).toBe(2_097_152);
+    expect(validasiJudul(JUDUL, berkas(UKURAN_MAKS_COVER)).cover).toBeUndefined();
+    expect(validasiJudul(JUDUL, berkas(UKURAN_MAKS_COVER + 1)).cover).toBe(
+      "Ukuran berkas melebihi batas 2 MB.",
+    );
+  });
+
+  it("NFR_SEC_06_cover_jenis_diketahui_bukan_JPG_PNG_ditahan; jenis kosong diserahkan ke backend", () => {
+    expect(validasiJudul(JUDUL, berkas(10, "image/gif")).cover).toBe(
+      "Cover harus berupa gambar JPG atau PNG.",
+    );
+    expect(validasiJudul(JUDUL, berkas(10, "image/jpeg")).cover).toBeUndefined();
+    expect(validasiJudul(JUDUL, berkas(10, "")).cover).toBeUndefined();
+  });
+
+  it("FR_BKU_02_cover_gagal_pesan_judul_tersimpan", () => {
+    expect(pesanCoverGagal("Cover harus berupa gambar JPG atau PNG.")).toBe(
+      "Judul tersimpan, tetapi cover gagal diunggah: Cover harus berupa gambar JPG atau PNG.",
+    );
+  });
+});
+
+describe("Tambah eksemplar (FR-BKU-04, OQ-20)", () => {
+  it("FR_BKU_04_validasi_jumlah_dan_rak (batas 1–100 diputuskan backend)", () => {
+    expect(validasiTambahEksemplar({ jumlah: "5", rak_id: "2" })).toEqual({});
+    expect(validasiTambahEksemplar({ jumlah: "", rak_id: "" })).toEqual({
+      jumlah: "Jumlah eksemplar wajib diisi.",
+      rak_id: "Pilih rak.",
+    });
+    expect(validasiTambahEksemplar({ jumlah: "2.5", rak_id: "2" }).jumlah).toBe(
+      "Jumlah eksemplar harus berupa bilangan bulat.",
+    );
+    expect(validasiTambahEksemplar({ jumlah: "500", rak_id: "2" })).toEqual({});
+    expect(validasiTambahEksemplar({ jumlah: "0", rak_id: "2" })).toEqual({});
+  });
+
+  it("FR_BKU_04_body_tambah_integer", () => {
+    expect(bodyTambahEksemplar({ jumlah: " 5 ", rak_id: "2" })).toEqual({ jumlah: 5, rak_id: 2 });
+  });
+
+  it("OQ_20_teks_konfirmasi_menyebut_jumlah_judul_rak_dan_tak_dapat_dihapus", () => {
+    const t = teksKonfirmasiTambah({ jumlah: 5, judul: "Langit yang Sama", rak: "R-01" });
+    expect(t).toContain("5 eksemplar");
+    expect(t).toContain("Langit yang Sama");
+    expect(t).toContain("R-01");
+    expect(t).toContain("tidak dapat dihapus");
+  });
+
+  it("FR_BKU_04_pesan_sukses_rentang_kode", () => {
+    expect(pesanSuksesTambah(["EKS-000012"])).toBe("1 eksemplar ditambahkan: EKS-000012.");
+    expect(pesanSuksesTambah(["EKS-000012", "EKS-000013", "EKS-000016"])).toBe(
+      "3 eksemplar ditambahkan: EKS-000012 s.d. EKS-000016.",
+    );
+  });
+});
+
+describe("Aksi eksemplar menurut status (FR-BKU-07/08, K-02, OQ-20)", () => {
+  it("FR_BKU_07_tandai_rusak_hanya_untuk_TERSEDIA", () => {
+    expect(aksiEksemplar("TERSEDIA")).toEqual({ tandaiRusak: true, keterangan: null });
+  });
+
+  it("FR_BKU_08_DIPINJAM_tanpa_tombol_dengan_keterangan_sirkulasi", () => {
+    expect(aksiEksemplar("DIPINJAM")).toEqual({
+      tandaiRusak: false,
+      keterangan: "Diubah lewat sirkulasi",
+    });
+  });
+
+  it.each(["HILANG", "RUSAK"])("K_02_%s_tanpa_aksi_dan_tanpa_pemulihan", (status) => {
+    expect(aksiEksemplar(status)).toEqual({ tandaiRusak: false, keterangan: null });
   });
 });
