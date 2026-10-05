@@ -15,9 +15,12 @@ export default async function LayoutAdmin({ children }: { children: ReactNode })
   if (tujuan || !sesi) redirect(tujuan ?? "/masuk");
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
-      <SidebarArea varian="admin" nama={sesi.nama} />
-      <main className="flex-1 px-4 py-6 sm:px-8">{children}</main>
+    <div className="flex min-h-screen flex-col lg:flex-row print:block">
+      {/* Cetak (label A4, 5.4.7): navigasi tidak ikut tercetak. */}
+      <div className="contents print:hidden">
+        <SidebarArea varian="admin" nama={sesi.nama} />
+      </div>
+      <main className="flex-1 px-4 py-6 sm:px-8 print:p-0">{children}</main>
     </div>
   );
 }
