@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { AreaIsian } from "./AreaIsian";
 import { Avatar, inisial } from "./Avatar";
 import { Isian } from "./Isian";
+import { IsianBerkas } from "./IsianBerkas";
 import { LabelStatus } from "./LabelStatus";
 import { Pesan } from "./Pesan";
 import { kelasTombol } from "./Tombol";
@@ -84,5 +87,82 @@ describe("Tombol (P2, decisions §B)", () => {
     expect(kelasTombol("primer")).toContain("bg-gold text-navy");
     expect(kelasTombol("primer")).not.toContain("text-white");
     expect(kelasTombol("sekunder")).toContain("border-navy");
+  });
+});
+
+describe("IsianBerkas (NFR-USA-02, IR-UI-04)", () => {
+  function Uji({
+    galat,
+    onPilih = () => {},
+  }: {
+    galat?: string;
+    onPilih?: (b: File | null) => void;
+  }) {
+    const [berkas, setBerkas] = useState<File | null>(null);
+    return (
+      <IsianBerkas
+        label="Foto (opsional)"
+        name="foto"
+        accept="image/jpeg,image/png"
+        teksTombol="Pilih Foto"
+        teksKosong="Belum ada foto dipilih"
+        berkas={berkas}
+        onPilih={(b) => {
+          setBerkas(b);
+          onPilih(b);
+        }}
+        galat={galat}
+      />
+    );
+  }
+
+  it("NFR_USA_02_tombol_pilih_foto_memicu_input_file (tanpa teks bawaan peramban)", () => {
+    render(<Uji />);
+    const input = screen.getByLabelText("Foto (opsional)") as HTMLInputElement;
+    expect(input.type).toBe("file");
+    expect(input.className).toContain("sr-only");
+    expect(input.getAttribute("accept")).toBe("image/jpeg,image/png");
+    const klik = vi.fn();
+    input.addEventListener("click", klik);
+    fireEvent.click(screen.getByText("Pilih Foto"));
+    expect(klik).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Belum ada foto dipilih")).toBeTruthy();
+    expect(screen.queryByText(/choose file|no file chosen/i)).toBeNull();
+  });
+
+  it("nama berkas tampil setelah dipilih dan diteruskan ke induk", () => {
+    const onPilih = vi.fn();
+    render(<Uji onPilih={onPilih} />);
+    const foto = new File([new Uint8Array(5)], "ktp-aulia.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("Foto (opsional)"), { target: { files: [foto] } });
+    expect(screen.getByText("ktp-aulia.png")).toBeTruthy();
+    expect(screen.queryByText("Belum ada foto dipilih")).toBeNull();
+    expect(onPilih).toHaveBeenCalledWith(foto);
+  });
+
+  it("IR_UI_04_galat_foto_tertempel_pada_input", () => {
+    render(<Uji galat="Ukuran berkas melebihi batas 2 MB." />);
+    const input = screen.getByLabelText("Foto (opsional)");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    const ids = input.getAttribute("aria-describedby")!.split(" ");
+    const teks = ids.map((id) => document.getElementById(id)?.textContent);
+    expect(teks).toContain("Ukuran berkas melebihi batas 2 MB.");
+  });
+});
+
+describe("lebar isian aman di layar sempit (360–414 px)", () => {
+  it("Isian & AreaIsian: wrapper min-w-0, kontrol w-full min-w-0", () => {
+    render(
+      <>
+        <Isian label="Nama" name="nama" />
+        <AreaIsian label="Alamat" name="alamat" />
+      </>,
+    );
+    for (const label of ["Nama", "Alamat"]) {
+      const kontrol = screen.getByLabelText(label);
+      expect(kontrol.className).toContain("w-full");
+      expect(kontrol.className).toContain("min-w-0");
+      expect(kontrol.parentElement!.className).toContain("min-w-0");
+    }
   });
 });

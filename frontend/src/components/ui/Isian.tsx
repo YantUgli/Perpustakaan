@@ -18,7 +18,7 @@ export function Isian({ label, galat, keterangan, id, required, className = "", 
     .join(" ");
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <label htmlFor={idIsian} className="text-sm font-medium text-navy">
         {label}
         {required && (
@@ -33,7 +33,7 @@ export function Isian({ label, galat, keterangan, id, required, className = "", 
         required={required}
         aria-invalid={galat ? true : undefined}
         aria-describedby={dijelaskanOleh || undefined}
-        className={`min-h-11 rounded-lg border bg-surface px-3 py-2 text-navy placeholder:text-navy/50 focus:outline-2 focus:outline-offset-1 focus:outline-navy ${galat ? "border-status-hilang" : "border-navy/40"} ${className}`}
+        className={`min-h-11 w-full min-w-0 rounded-lg border bg-surface px-3 py-2 text-navy placeholder:text-navy/50 focus:outline-2 focus:outline-offset-1 focus:outline-navy ${galat ? "border-status-hilang" : "border-navy/40"} ${className}`}
         {...lain}
       />
       {keterangan && !galat && (
