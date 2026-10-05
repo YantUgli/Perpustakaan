@@ -45,6 +45,7 @@ ignore = ["N802", "N818"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+# Durasi setiap fase test >= 1 dtk selalu tercatat di log (termasuk CI), walau test lulus.
+addopts = "-ra --durations=0 --durations-min=1.0"
 # pytest mengatur ulang filter warning per test; samakan dengan filter produksi di app/services/berkas.py
 filterwarnings = ["error::PIL.Image.DecompressionBombWarning"]
