@@ -13,7 +13,7 @@ from datetime import UTC, date, datetime, timedelta
 import pytest
 from openpyxl import load_workbook
 from pypdf import PdfReader
-from sqlalchemy import func, insert, select
+from sqlalchemy import func, insert, select, text
 from sqlalchemy.orm import Session
 
 from app.models import Eksemplar, ItemTransaksi, Tagihan, TransaksiPeminjaman
@@ -383,16 +383,31 @@ def seribu_baris(db: Session) -> None:
         ],
     )
     db.flush()
+    # Statistik planner harus mencerminkan baris yang diukur. Suite me-rollback hampir semua insert,
+    # sehingga autovacuum bisa mencatat tabel ini `relpages > 0, reltuples = 0` (halaman berisi
+    # tuple mati saja); baris fixture yang belum di-commit tak terlihat autoanalyze, planner lalu
+    # menaksir 1 baris dan memilih nested loop O(n^3): 98,9 dtk (transaksi) / 134,8 dtk (tagihan)
+    # saat direproduksi. Di produksi data di-commit dan autoanalyze memperbaikinya <= 1 menit
+    # (penyelidikan chore/selidiki-nfr-prf-03, progress.md 5.2.3/5.3.13). Di luar pengukuran waktu.
+    db.execute(
+        text(
+            "ANALYZE item_transaksi, transaksi_peminjaman, eksemplar, anggota, judul_buku, "
+            "tagihan, admin"
+        )
+    )
 
 
 @pytest.mark.parametrize("fmt", ["pdf", "xlsx"])
 @pytest.mark.parametrize(("path", "kolom"), [(API_TRX, KOLOM_TRX), (API_TGH, KOLOM_TGH)])
-def test_NFR_PRF_03_ekspor_1000_baris_maks_10_detik(klien_admin, seribu_baris, path, kolom, fmt):
+def test_NFR_PRF_03_ekspor_1000_baris_maks_10_detik(
+    klien_admin, seribu_baris, path, kolom, fmt, capsys
+):
     mulai = time.perf_counter()
     r = klien_admin.get(f"{path}/ekspor", params={"format": fmt})
     durasi = time.perf_counter() - mulai
     assert r.status_code == 200, r.text
-    print(f"\nNFR-PRF-03 {path.rsplit('/', 1)[1]} {fmt}: {durasi:.2f} dtk")
+    with capsys.disabled():
+        print(f"\nNFR-PRF-03 {path.rsplit('/', 1)[1]} {fmt}: {durasi:.2f} dtk")
     if fmt == "xlsx":
         assert len(_tabel_xlsx(r.content, kolom)[1]) == 1_000
     else:
