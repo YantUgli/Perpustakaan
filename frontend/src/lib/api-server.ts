@@ -7,6 +7,7 @@
  * - Hanya untuk kode server; peramban memakai `ambil()` dari api-klien.ts.
  */
 import { cookies } from "next/headers";
+import { unstable_rethrow } from "next/navigation";
 
 import { alamatBackend } from "./alamat-backend";
 import { urlApi } from "./api";
@@ -42,5 +43,19 @@ export async function ambilSesiServer(): Promise<Sesi | null> {
     // Hanya GalatApi 401 yang berarti "belum login"; sinyal internal Next & galat lain diteruskan.
     if (e instanceof GalatApi && e.status === 401) return null;
     throw e;
+  }
+}
+
+/**
+ * Untuk halaman publik: sesi bila ada, `null` bila belum login ATAU sesi tak terbaca (backend tak terjangkau),
+ * agar halaman publik tetap tampil (BR-01). Sinyal internal Next (rute dinamis, redirect) tetap diteruskan.
+ */
+export async function ambilSesiAtauTamu(): Promise<Sesi | null> {
+  try {
+    return await ambilSesiServer();
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("Sesi tidak dapat dibaca; halaman publik tampil sebagai pengunjung.", e);
+    return null;
   }
 }
