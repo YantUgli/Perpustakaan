@@ -155,6 +155,29 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/katalog/kategori": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Daftar Kategori
+     * @description ASUMSI(OQ-43): semua kategori (id, nama), urut A–Z tak peka huruf.
+     *
+     *     Tanpa halaman, hitungan buku, maupun filter; termasuk kategori yang belum punya judul.
+     *     Urutan sama dengan daftar admin (`koleksi.daftar_kategori`).
+     */
+    get: operations["daftar_kategori_api_v1_katalog_kategori_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/kategori": {
     parameters: {
       query?: never;
@@ -2020,6 +2043,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["GalatRespons"];
+        };
+      };
+    };
+  };
+  daftar_kategori_api_v1_katalog_kategori_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["KategoriKeluar"][];
         };
       };
     };

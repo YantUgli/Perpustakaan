@@ -1,4 +1,7 @@
-"""WP 5.3.2 — katalog publik & pencarian: FR-KTL-01..04, BR-01, NFR-PRF-01, OQ-13, OQ-22..24."""
+"""WP 5.3.2 — katalog publik & pencarian.
+
+FR-KTL-01..04, BR-01, NFR-PRF-01, OQ-13, OQ-22..24, OQ-43 (daftar kategori publik).
+"""
 
 import io
 import time
@@ -15,6 +18,7 @@ from app.seed.data_uji import seed_performa
 from tests import pabrik
 
 API = "/api/v1/katalog/judul"
+API_KATEGORI = "/api/v1/katalog/kategori"
 
 
 def _penanda() -> str:
@@ -333,3 +337,68 @@ def test_NFR_PRF_01_pencarian_10000_eksemplar_maks_2_detik(client, db: Session, 
     with capsys.disabled():
         print("\nNFR-PRF-01 durasi (detik):", {k: round(v, 3) for k, v in durasi.items()})
     assert max(durasi.values()) <= 2.0
+
+
+# ------------------------------------------------------------- daftar kategori publik (OQ-43)
+
+
+def _nama_kategori_publik(client, awalan: str) -> list[str]:
+    r = client.get(API_KATEGORI)
+    assert r.status_code == 200, r.text
+    return [k["nama"] for k in r.json() if k["nama"].startswith(awalan)]
+
+
+def test_BR_01_OQ_43_kategori_publik_tanpa_login(client, db: Session):
+    k = pabrik.kategori(db, nama=f"{_penanda()} Sejarah")
+    client.cookies.clear()
+    r = client.get(API_KATEGORI)
+    assert r.status_code == 200, r.text
+    assert isinstance(r.json(), list)
+    assert {"id": k.id, "nama": k.nama} in r.json()
+
+
+def test_OQ_43_kategori_hanya_id_dan_nama(client, db: Session):
+    pabrik.kategori(db, nama=f"{_penanda()} Sains")
+    data = client.get(API_KATEGORI).json()
+    assert data
+    assert all(set(k) == {"id", "nama"} for k in data)
+
+
+def test_OQ_43_kategori_urut_a_z_tak_peka_huruf(client, db: Session):
+    p = _penanda()
+    # Urutan mentah (kolasi C) menaruh "Beta"/"Zeta" sebelum "alfa"/"charlie"; lower(nama) tidak.
+    for nama in ("Zeta", "alfa", "Beta", "charlie"):
+        pabrik.kategori(db, nama=f"{p} {nama}")
+    assert _nama_kategori_publik(client, p) == [
+        f"{p} alfa",
+        f"{p} Beta",
+        f"{p} charlie",
+        f"{p} Zeta",
+    ]
+
+
+def test_OQ_43_kategori_tanpa_halaman(client, db: Session):
+    p = _penanda()
+    for i in range(25):  # lebih dari per_halaman bawaan katalog (20)
+        pabrik.kategori(db, nama=f"{p} {i:02d}")
+    assert len(_nama_kategori_publik(client, p)) == 25
+
+
+def test_OQ_43_kategori_tanpa_judul_tetap_tampil(client, db: Session):
+    p = _penanda()
+    kosong = pabrik.kategori(db, nama=f"{p} Kosong")
+    berisi = pabrik.kategori(db, nama=f"{p} Berisi")
+    pabrik.judul(db, kategori_id=berisi.id)
+    assert _nama_kategori_publik(client, p) == [berisi.nama, kosong.nama]
+
+
+@pytest.mark.parametrize("params", [{"kategori_id": "1"}, {"q": "tidak-ada"}, {"halaman": "2"}])
+def test_OQ_43_kategori_tanpa_filter(client, db: Session, params):
+    pabrik.kategori(db, nama=f"{_penanda()} Anak")
+    tanpa = client.get(API_KATEGORI).json()
+    assert client.get(API_KATEGORI, params=params).json() == tanpa
+
+
+@pytest.mark.parametrize("method", ["post", "put", "delete"])
+def test_OQ_43_kategori_publik_hanya_baca(client, method):
+    assert getattr(client, method)(API_KATEGORI).status_code == 405
