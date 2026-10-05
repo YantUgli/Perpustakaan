@@ -9,7 +9,9 @@ import {
   PESAN_AKUN,
   UKURAN_MAKS_FOTO,
   validasiDaftar,
+  validasiGantiPassword,
   validasiMasuk,
+  validasiProfil,
 } from "./validasi-akun";
 
 const SAH: NilaiDaftar = {
@@ -166,5 +168,80 @@ describe("pesan klien sama dengan backend", () => {
     const maks = /^UKURAN_MAKS_GAMBAR\s*=\s*2 \* 1024 \* 1024/m.exec(berkasPy);
     if (!maks) throw new Error("UKURAN_MAKS_GAMBAR = 2 * 1024 * 1024 tidak ditemukan di berkas.py");
     expect(UKURAN_MAKS_FOTO).toBe(2 * 1024 * 1024);
+  });
+});
+
+describe("validasiProfil (FR-AKN-07/08, K-05: tanpa NIK & foto)", () => {
+  const PROFIL = {
+    nama: "Aulia Rahma",
+    alamat: "Jl. Melati 12",
+    email: "aulia@contoh.example",
+    telepon: "0812",
+  };
+
+  it("data sah tanpa galat", () => {
+    expect(validasiProfil(PROFIL)).toEqual({});
+  });
+
+  it("FR_AKN_07_validasi_profil_wajib_setelah_trim", () => {
+    expect(validasiProfil({ nama: " ", alamat: "", email: "", telepon: "  " })).toEqual({
+      nama: "Nama wajib diisi.",
+      alamat: "Alamat wajib diisi.",
+      email: "Email wajib diisi.",
+      telepon: "Telepon wajib diisi.",
+    });
+  });
+
+  it("FR_AKN_08_validasi_profil_format_email", () => {
+    expect(validasiProfil({ ...PROFIL, email: "aulia@" }).email).toBe("Format email tidak valid.");
+  });
+});
+
+describe("validasiGantiPassword (FR-AKN-09, NFR-SEC-02)", () => {
+  const SAH = { password_lama: "lama-123", password_baru: "baru-1234", konfirmasi: "baru-1234" };
+
+  it("data sah tanpa galat", () => {
+    expect(validasiGantiPassword(SAH)).toEqual({});
+  });
+
+  it("FR_AKN_09_password_lama_wajib", () => {
+    expect(validasiGantiPassword({ ...SAH, password_lama: "" }).password_lama).toBe(
+      "Password lama wajib diisi.",
+    );
+  });
+
+  it("NFR_SEC_02_password_baru_minimal_8 (kosong pun memakai pesan yang sama dengan backend)", () => {
+    expect(
+      validasiGantiPassword({ ...SAH, password_baru: "1234567", konfirmasi: "1234567" })
+        .password_baru,
+    ).toBe("Password baru minimal 8 karakter.");
+    expect(validasiGantiPassword({ ...SAH, password_baru: "", konfirmasi: "" }).password_baru).toBe(
+      "Password baru minimal 8 karakter.",
+    );
+  });
+
+  it("konfirmasi harus sama (hanya di klien)", () => {
+    expect(validasiGantiPassword({ ...SAH, konfirmasi: "beda-1234" }).konfirmasi).toBe(
+      "Konfirmasi password tidak sama dengan password baru.",
+    );
+  });
+});
+
+describe("pesan profil & password sama dengan backend/app/services/anggota.py", () => {
+  it("pesan_klien_sama_dengan_backend_anggota", () => {
+    const sumber = readFileSync(
+      fileURLToPath(new URL("../../../backend/app/services/anggota.py", import.meta.url)),
+      "utf8",
+    );
+    for (const teks of [
+      '"Password lama wajib diisi."',
+      'f"Password baru minimal {PANJANG_MIN_PASSWORD} karakter."',
+      'f"{_LABEL[k]} wajib diisi."',
+      '"Format email tidak valid."',
+    ]) {
+      if (!sumber.includes(teks)) {
+        throw new Error(`Teks ${teks} tidak ditemukan di backend/app/services/anggota.py`);
+      }
+    }
   });
 });

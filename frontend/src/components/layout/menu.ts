@@ -15,7 +15,6 @@ export const MENU_ANGGOTA: ItemMenu[] = [
   { href: "/anggota/riwayat", label: "Riwayat" },
   { href: "/anggota/tagihan", label: "Tagihan" },
   { href: "/anggota/profil", label: "Profil" },
-  { href: "/anggota/password", label: "Ubah Password" },
 ];
 
 // Brief §9.1 "Menu Admin"; eksemplar dikelola dari halaman judul (tidak ada daftar eksemplar lintas judul).
