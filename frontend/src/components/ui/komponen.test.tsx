@@ -188,3 +188,20 @@ describe("Paginasi (FR-AGT-03/04)", () => {
     expect(screen.getByText("Halaman 1 dari 1")).toBeTruthy();
   });
 });
+
+describe("Paginasi mempertahankan filter (FR-TGH-01)", () => {
+  it("params ikut di setiap tautan, nilai kosong dibuang", () => {
+    render(
+      <Paginasi
+        halaman={2}
+        total={60}
+        perHalaman={20}
+        path="/admin/tagihan"
+        params={{ status: "BELUM_LUNAS", jenis: undefined, anggota: "AGT-000001" }}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Berikutnya" }).getAttribute("href")).toBe(
+      "/admin/tagihan?status=BELUM_LUNAS&anggota=AGT-000001&halaman=3",
+    );
+  });
+});
