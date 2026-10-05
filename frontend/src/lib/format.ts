@@ -23,3 +23,11 @@ export function formatRupiah(nominal: number): string {
   }
   return `Rp${String(nominal).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 }
+
+/** `4120` → `"4.120"`: bilangan bulat tidak negatif dengan titik pemisah ribuan (hitungan, bukan uang). */
+export function formatAngka(n: number): string {
+  if (!Number.isSafeInteger(n) || n < 0) {
+    throw new Error(`Hitungan harus bilangan bulat tidak negatif, diterima: ${n}`);
+  }
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
