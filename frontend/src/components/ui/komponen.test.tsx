@@ -8,6 +8,7 @@ import { Avatar, inisial } from "./Avatar";
 import { Isian } from "./Isian";
 import { IsianBerkas } from "./IsianBerkas";
 import { LabelStatus } from "./LabelStatus";
+import { Paginasi } from "./Paginasi";
 import { Pesan } from "./Pesan";
 import { kelasTombol } from "./Tombol";
 
@@ -164,5 +165,26 @@ describe("lebar isian aman di layar sempit (360–414 px)", () => {
       expect(kontrol.className).toContain("min-w-0");
       expect(kontrol.parentElement!.className).toContain("min-w-0");
     }
+  });
+});
+
+describe("Paginasi (FR-AGT-03/04)", () => {
+  it("halaman tengah: tautan sebelumnya & berikutnya", () => {
+    render(<Paginasi halaman={2} total={45} perHalaman={20} path="/anggota/riwayat" />);
+    expect(screen.getByRole("link", { name: "Sebelumnya" }).getAttribute("href")).toBe(
+      "/anggota/riwayat?halaman=1",
+    );
+    expect(screen.getByRole("link", { name: "Berikutnya" }).getAttribute("href")).toBe(
+      "/anggota/riwayat?halaman=3",
+    );
+    expect(screen.getByText("Halaman 2 dari 3")).toBeTruthy();
+  });
+
+  it("ujung: tombol nonaktif (bukan tautan)", () => {
+    render(<Paginasi halaman={1} total={5} perHalaman={20} path="/anggota/tagihan" />);
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText("Sebelumnya").getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByText("Berikutnya").getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByText("Halaman 1 dari 1")).toBeTruthy();
   });
 });

@@ -68,8 +68,13 @@ describe("Menu area", () => {
       "Riwayat",
       "Tagihan",
       "Profil",
-      "Ubah Password",
     ]);
+  });
+
+  it("menu anggota tanpa 'Ubah Password' (keputusan pemilik proyek: ubah password di halaman Profil)", () => {
+    expect(
+      MENU_ANGGOTA.some((m) => /password/i.test(m.label) || m.href === "/anggota/password"),
+    ).toBe(false);
   });
 
   it("menu admin tanpa kelola akun admin (FR-AKN-12, K-04)", () => {

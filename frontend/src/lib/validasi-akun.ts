@@ -81,3 +81,44 @@ export function validasiMasuk(n: { email: string; password: string }): Record<st
   if (!n.password) galat.password = wajibDiisi(LABEL_ISIAN.password);
   return galat;
 }
+
+/** FR-AKN-07/08: ubah data diri (NIK & foto tidak dapat diubah, K-05). Pesan sama dengan backend `anggota.py`. */
+export function validasiProfil(n: {
+  nama: string;
+  alamat: string;
+  email: string;
+  telepon: string;
+}): Record<string, string> {
+  const galat: Record<string, string> = {};
+  for (const k of ["nama", "alamat", "email", "telepon"] as const) {
+    if (!n[k].trim()) galat[k] = wajibDiisi(LABEL_ISIAN[k]);
+  }
+  const email = n.email.trim();
+  if (email && !POLA_EMAIL.test(email)) galat.email = PESAN_AKUN.email;
+  return galat;
+}
+
+export const PESAN_GANTI_PASSWORD = {
+  lamaWajib: "Password lama wajib diisi.",
+  baruPendek: `Password baru minimal ${PANJANG_MIN_PASSWORD} karakter.`,
+  konfirmasiWajib: "Konfirmasi password wajib diisi.",
+  konfirmasiBeda: "Konfirmasi password tidak sama dengan password baru.",
+} as const;
+
+/**
+ * FR-AKN-09, NFR-SEC-02. Password baru kosong memakai pesan "minimal 8" seperti backend.
+ * Konfirmasi hanya diperiksa di klien (tidak dikirim ke backend).
+ */
+export function validasiGantiPassword(n: {
+  password_lama: string;
+  password_baru: string;
+  konfirmasi: string;
+}): Record<string, string> {
+  const galat: Record<string, string> = {};
+  if (!n.password_lama) galat.password_lama = PESAN_GANTI_PASSWORD.lamaWajib;
+  if (n.password_baru.length < PANJANG_MIN_PASSWORD)
+    galat.password_baru = PESAN_GANTI_PASSWORD.baruPendek;
+  if (!n.konfirmasi) galat.konfirmasi = PESAN_GANTI_PASSWORD.konfirmasiWajib;
+  else if (n.konfirmasi !== n.password_baru) galat.konfirmasi = PESAN_GANTI_PASSWORD.konfirmasiBeda;
+  return galat;
+}
