@@ -49,18 +49,25 @@ npm install
 npm run dev                                  # http://localhost:3000
 ```
 
+Frontend dan API **satu origin** (`docs/proyek/decisions.md` §B): browser selalu memanggil path relatif `/api/v1`.
+Saat `npm run dev`, Next.js meneruskannya ke backend (`API_INTERNAL_URL` di `frontend/.env.local`, kosong =
+`http://127.0.0.1:8000`). Rewrite ini **hanya aktif di development**. `next build && next start` di lokal butuh
+reverse proxy yang meneruskan `/api/v1` ke FastAPI pada origin yang sama (seperti staging/produksi), dan
+`API_INTERNAL_URL` wajib diisi.
+
 > ⚠ Server produksi **wajib** `APP_ENV=production` (nilai sah: `dev` | `staging` | `production`).
 > Produksi hanya di-seed akun admin (OQ-15). Admin lupa password → jalankan seed admin dengan email lain (OQ-14).
 
 ## Alamat (dev)
 
-| Layanan    | URL                                 |
-| ---------- | ----------------------------------- |
-| Frontend   | http://localhost:3000               |
-| Backend    | http://localhost:8000               |
-| API Docs   | http://localhost:8000/api/v1/docs   |
-| Health     | http://localhost:8000/api/v1/health |
-| PostgreSQL | 127.0.0.1:5434                      |
+| Layanan                        | URL                                 |
+| ------------------------------ | ----------------------------------- |
+| Frontend                       | http://localhost:3000               |
+| API via frontend (rewrite dev) | http://localhost:3000/api/v1/health |
+| Backend                        | http://localhost:8000               |
+| API Docs                       | http://localhost:8000/api/v1/docs   |
+| Health                         | http://localhost:8000/api/v1/health |
+| PostgreSQL                     | 127.0.0.1:5434                      |
 
 ## Pemeriksaan sebelum merge
 
