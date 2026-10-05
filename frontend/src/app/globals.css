@@ -1,26 +1,42 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Token design system Naratif (design-system §2, §5). Komponen memakai token ini, bukan hex langsung.
+ * Tanpa mode gelap: design system tidak mendefinisikannya.
+ */
+@theme {
+  --color-navy: #0f2747;
+  --color-gold: #b08d57; /* hanya dekorasi di latar ivory (2,87); teks di ivory pakai gold-700 */
+  --color-gold-700: #84632f;
+  --color-ivory: #faf6ed;
+  --color-line: #d8c7a6;
+  --color-surface: #ffffff;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Badge status (IR-UI-03). Belum Lunas memakai nada hilang, Lunas memakai nada tersedia. */
+  --color-status-tersedia: #2f6b4f;
+  --color-status-tersedia-bg: #e4efe7;
+  --color-status-dipinjam: #0f2747;
+  --color-status-dipinjam-bg: #e2e7ef;
+  --color-status-dikembalikan: #3f4a5a; /* P3: 7,38 terhadap latarnya */
+  --color-status-dikembalikan-bg: #e6e9ee;
+  --color-status-terlambat: #9a4320;
+  --color-status-terlambat-bg: #f7e4d8;
+  --color-status-hilang: #8e2a2a;
+  --color-status-hilang-bg: #f4dfdf;
+  --color-status-rusak: #5c5446;
+  --color-status-rusak-bg: #eae5dc;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-playfair), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ivory);
+  color: var(--color-navy);
+  font-family: var(--font-sans);
+}
+
+/* Angka di tabel, nominal, dan kode rata kolom (design-system §3). */
+.angka {
+  font-variant-numeric: tabular-nums;
 }
