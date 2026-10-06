@@ -8,7 +8,7 @@ export function FooterPublik() {
     <footer className="mt-auto bg-navy text-ivory">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex flex-col gap-1">
-          <Logo latar="gelap" />
+          <Logo latar="gelap" className="self-start" />
           <p className="text-sm text-ivory/80">Lebih Banyak Cerita, Lebih Luas Dunia.</p>
         </div>
         <nav aria-label="Tautan cepat">

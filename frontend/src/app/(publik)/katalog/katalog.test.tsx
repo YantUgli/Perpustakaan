@@ -238,14 +238,43 @@ describe("Beranda / (FR-KTL-05, OQ-43)", () => {
 });
 
 describe("Tentang /tentang (FR-KTL-05)", () => {
-  it("FR_KTL_05_tentang_isi_faktual_memakai_penanda", () => {
+  it("FR_KTL_05_tentang_bagian_terisi_bukan_penanda", () => {
     const { container } = render(<Tentang />);
-    const penanda = [...container.querySelectorAll("[data-penanda]")].map((e) => e.textContent);
-    expect(penanda.some((t) => t?.includes("alamat"))).toBe(true);
-    expect(penanda.some((t) => t?.includes("jam operasional"))).toBe(true);
-    expect(penanda.some((t) => t?.includes("telepon dan email"))).toBe(true);
-    // Tanpa angka karangan dan tanpa layanan di luar lingkup (domain-rules §13).
-    expect(container.textContent).not.toMatch(/\d/);
-    expect(container.textContent).not.toMatch(/e-book|reservasi/i);
+    const judul = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    expect(judul).toEqual([
+      "Profil",
+      "Nilai / Visi",
+      "Fasilitas & Layanan",
+      "Alamat",
+      "Jam Buka",
+      "Kontak",
+    ]);
+    // Bagian yang datanya lengkap tidak memuat penanda sama sekali.
+    for (const nama of judul) {
+      const bagian = screen.getByRole("heading", { level: 2, name: nama }).parentElement!;
+      expect(bagian.querySelector("[data-penanda]")).toBeNull();
+      expect(bagian.textContent).not.toMatch(/PENANDA|\[/);
+    }
+    expect(container.textContent).toContain("Perpustakaan Naratif adalah perpustakaan umum");
+    expect(container.textContent).toContain(
+      "Peminjaman buku fisik: maksimal 3 buku dipinjam pada saat yang sama, masa pinjam 30 hari.",
+    );
+    expect(container.textContent).toContain("Senin–Jumat: 08.00–17.00 WIB");
+    expect(container.textContent).toContain("Telepon: (021) 555-0123");
+    expect(container.textContent).toContain("Email: info@naratif.id");
+    // "Dalam Angka" tidak diisi pemilik proyek → dihapus, bukan dikarang.
+    expect(screen.queryByText(/dalam angka/i)).toBeNull();
+    // Tanpa layanan di luar lingkup (domain-rules §13).
+    expect(container.textContent).not.toMatch(/e-book|digital|reservasi|booking|perpanjang/i);
+  });
+
+  it("FR_KTL_05_tentang_tanpa_penanda_tersisa", () => {
+    const { container } = render(<Tentang />);
+    expect(container.querySelectorAll("[data-penanda]")).toHaveLength(0);
+    expect(container.textContent).not.toMatch(/PENANDA|Menunggu data/);
+    const alamat = screen.getByRole("heading", { level: 2, name: "Alamat" }).parentElement!;
+    expect(alamat.textContent).toContain(
+      "Jl. Surya Kencana No. 58, Pamulang Barat, Kec. Pamulang, Kota Tangerang Selatan, Banten 15417",
+    );
   });
 });
