@@ -13,7 +13,7 @@ import { CoverBuku } from "./CoverBuku";
 export function KartuBuku({ judul: j }: { judul: JudulKatalog }) {
   return (
     <article className="flex gap-4 rounded-xl border border-line bg-surface p-4">
-      <CoverBuku coverUrl={j.cover_url} className="h-32 w-22 shrink-0" />
+      <CoverBuku coverUrl={j.cover_url} className="aspect-5/8 w-22 shrink-0 self-start" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="self-start rounded-full bg-navy/5 px-2.5 py-0.5 text-xs text-navy/80">
           {j.kategori.nama}

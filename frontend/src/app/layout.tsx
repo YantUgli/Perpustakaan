@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Naratif — Perpustakaan", template: "%s · Naratif" },
+  title: { default: "Naratif Perpustakaan", template: "%s · Naratif" },
   description: "Katalog dan layanan sirkulasi perpustakaan.",
 };
 

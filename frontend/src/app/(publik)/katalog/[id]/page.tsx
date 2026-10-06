@@ -8,6 +8,7 @@ import { ambilServer } from "@/lib/api-server";
 import { formatRupiah } from "@/lib/format";
 import { GalatApi } from "@/lib/galat";
 import { type JudulKatalog, teksRak } from "@/lib/katalog";
+import { KONTAINER } from "@/lib/tata-letak";
 
 export const metadata: Metadata = { title: "Detail Buku" };
 
@@ -29,7 +30,7 @@ async function ambilJudulKatalog(id: string): Promise<JudulKatalog> {
 export default async function DetailBuku({ params }: { params: Promise<{ id: string }> }) {
   const j = await ambilJudulKatalog((await params).id);
   return (
-    <section className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6">
+    <section className={`${KONTAINER} flex flex-col gap-6 py-10`}>
       <nav aria-label="Breadcrumb" className="text-sm text-navy/70">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
@@ -50,7 +51,7 @@ export default async function DetailBuku({ params }: { params: Promise<{ id: str
         </ol>
       </nav>
 
-      <div className="flex flex-col gap-8 sm:flex-row">
+      <div className="flex max-w-5xl flex-col gap-8 sm:flex-row lg:gap-12">
         <CoverBuku coverUrl={j.cover_url} className="aspect-2/3 w-44 shrink-0 self-start sm:w-56" />
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <span className="self-start rounded-full bg-navy/5 px-3 py-1 text-xs text-navy/80">

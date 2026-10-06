@@ -36,6 +36,14 @@ describe("Katalog publik — logika tampilan", () => {
     );
   });
 
+  it("FR_KTL_05_ketersediaan_ringkas_kartu_beranda", () => {
+    expect(teksKetersediaan({ tersedia: 2, total: 5 }, true)).toBe("2 dari 5 tersedia");
+    expect(teksKetersediaan({ tersedia: 1200, total: 1500 }, true)).toBe(
+      "1.200 dari 1.500 tersedia",
+    );
+    expect(teksKetersediaan({ tersedia: 0, total: 0 }, true)).toBe("0 dari 0 tersedia");
+  });
+
   it("OQ_23_judul_tanpa_eksemplar_nol_dari_nol", () => {
     expect(teksKetersediaan({ tersedia: 0, total: 0 })).toBe("0 dari 0 eksemplar tersedia");
   });

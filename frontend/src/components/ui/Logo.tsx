@@ -1,7 +1,8 @@
 type Props = {
   /** `terang` = untuk latar ivory (logo navy); `gelap` = untuk latar navy (logo ivory). */
   latar?: "terang" | "gelap";
-  ukuran?: "sedang" | "besar";
+  /** `responsif` = `sedang` di bawah `lg`, `besar` mulai `lg` (header publik). */
+  ukuran?: "sedang" | "besar" | "responsif";
   className?: string;
 };
 
@@ -25,7 +26,29 @@ const PATH_HALAMAN = [
 const UKURAN = {
   sedang: { ikon: "h-7", garis: "h-7", teks: "text-2xl" },
   besar: { ikon: "h-11", garis: "h-11", teks: "text-4xl" },
+  responsif: { ikon: "h-7 lg:h-11", garis: "h-7 lg:h-11", teks: "text-2xl lg:text-4xl" },
 };
+
+/**
+ * Ikon buku logo saja (tanpa garis & wordmark), juga untuk watermark dekoratif. Badan buku `currentColor`,
+ * halaman gold.
+ */
+export function IkonLogo({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="693.33 387.01 533.34 305.98"
+      aria-hidden="true"
+      className={`block w-auto ${className}`}
+    >
+      {PATH_BUKU.map((d) => (
+        <path key={d.slice(0, 16)} fill="currentColor" d={d} />
+      ))}
+      {PATH_HALAMAN.map((d) => (
+        <path key={d.slice(0, 16)} fill={WARNA_GOLD} d={d} />
+      ))}
+    </svg>
+  );
+}
 
 /**
  * Logo Naratif: ikon buku dari SVG asli UX + garis pemisah gold + wordmark teks
@@ -39,18 +62,7 @@ export function Logo({ latar = "terang", ukuran = "sedang", className = "" }: Pr
       className={`inline-flex shrink-0 items-center gap-2 ${className}`}
       style={{ color: warna }}
     >
-      <svg
-        viewBox="693.33 387.01 533.34 305.98"
-        aria-hidden="true"
-        className={`block w-auto ${u.ikon}`}
-      >
-        {PATH_BUKU.map((d) => (
-          <path key={d.slice(0, 16)} fill="currentColor" d={d} />
-        ))}
-        {PATH_HALAMAN.map((d) => (
-          <path key={d.slice(0, 16)} fill={WARNA_GOLD} d={d} />
-        ))}
-      </svg>
+      <IkonLogo className={u.ikon} />
       <span
         aria-hidden="true"
         className={`w-px ${u.garis}`}

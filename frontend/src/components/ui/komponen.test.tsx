@@ -11,6 +11,7 @@ import { LabelStatus } from "./LabelStatus";
 import { Paginasi } from "./Paginasi";
 import { Pesan } from "./Pesan";
 import { kelasTombol } from "./Tombol";
+import { FormCari } from "@/components/katalog/FormCari";
 
 afterEach(cleanup);
 
@@ -83,11 +84,21 @@ describe("Isian & Pesan (IR-UI-04)", () => {
   });
 });
 
-describe("Tombol (P2, decisions §B)", () => {
-  it("primer: latar gold + teks navy; sekunder: outline navy", () => {
-    expect(kelasTombol("primer")).toContain("bg-gold text-navy");
-    expect(kelasTombol("primer")).not.toContain("text-white");
+describe("Tombol (decisions §B, keputusan 2026-10-06)", () => {
+  it("primer: latar gold-700 + teks putih (5,51, AA); sekunder: outline navy", () => {
+    expect(kelasTombol("primer")).toContain("bg-gold-700 text-white");
+    // Gold #B08D57 tidak lagi menjadi latar tombol, dan teks navy di atas gold tidak dipakai lagi.
+    expect(kelasTombol("primer")).not.toMatch(/\bbg-gold\b(?!-)|\btext-navy\b/);
     expect(kelasTombol("sekunder")).toContain("border-navy");
+    // Fokus terlihat di latar terang (outline navy) maupun di latar navy (cincin ivory).
+    expect(kelasTombol("primer")).toContain("focus-visible:outline-navy");
+    expect(kelasTombol("primer")).toContain("focus-visible:ring-ivory");
+  });
+
+  it("tombol Cari di FormCari memakai kelas varian primer yang sama", () => {
+    render(<FormCari />);
+    const cari = screen.getByRole("button", { name: "Cari" });
+    for (const k of kelasTombol("primer").split(/\s+/)) expect(cari.className).toContain(k);
   });
 });
 
