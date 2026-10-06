@@ -28,7 +28,8 @@ const { default: Katalog } = await import("./page");
 const { default: DetailBuku } = await import("./[id]/page");
 const { default: Tentang } = await import("../tentang/page");
 const { GalatApi } = await import("@/lib/galat");
-const { bagianTentang } = await import("@/lib/info-perpustakaan");
+const { BAGIAN_TENTANG, bagianTentang } = await import("@/lib/info-perpustakaan");
+const { IsiTentang } = await import("@/components/publik/IsiTentang");
 const { ikonKategori, IKON_KATEGORI_BAWAAN } = await import("@/components/katalog/ikon-kategori");
 
 beforeEach(() => {
@@ -642,6 +643,7 @@ describe("Tentang /tentang (FR-KTL-05)", () => {
       "Alamat",
       "Jam Buka",
       "Kontak",
+      "Daftar Sekarang, Mulai Perjalanan Membaca Anda",
     ]);
     // Bagian yang datanya lengkap tidak memuat penanda sama sekali.
     for (const nama of judul) {
@@ -670,5 +672,76 @@ describe("Tentang /tentang (FR-KTL-05)", () => {
     expect(alamat.textContent).toContain(
       "Jl. Surya Kencana No. 58, Pamulang Barat, Kec. Pamulang, Kota Tangerang Selatan, Banten 15417",
     );
+  });
+
+  it("FR_KTL_05_tentang_tata_letak_isi_apa_adanya", () => {
+    const { container } = render(<Tentang />);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "Tentang Perpustakaan Naratif",
+    );
+    // Panel hero dekoratif CSS, tanpa foto apa pun (hal-06 memakai foto; dibuang).
+    expect(container.querySelector("img")).toBeNull();
+
+    // Keputusan 1: paragraf pertama Profil UTUH jadi pembuka hero, tidak diulang di bagian Profil.
+    const [pembuka, ...sisaProfil] = bagianTentang("Profil")!.paragraf!;
+    const hero = screen.getByRole("heading", { level: 1 }).closest("section")!;
+    expect(within(hero).getByText(pembuka).textContent).toBe(pembuka);
+    expect(container.textContent!.split(pembuka)).toHaveLength(2);
+    const profil = screen.getByRole("heading", { level: 2, name: "Profil" }).parentElement!;
+    expect(profil.textContent).not.toContain(pembuka);
+    for (const p of sisaProfil) expect(within(profil).getByText(p).textContent).toBe(p);
+
+    // Keputusan 3: kartu nilai tanpa judul, hanya ikon + kalimat apa adanya.
+    const nilai = screen.getByRole("heading", { level: 2, name: "Nilai / Visi" }).parentElement!;
+    expect(
+      within(nilai)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual(bagianTentang("Nilai / Visi")!.daftar);
+    expect(within(nilai).queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+
+    // Label fasilitas = bagian sebelum titik dua PERTAMA; textContent item tetap sama persis dengan data.
+    const fasilitas = screen.getByRole("heading", {
+      level: 2,
+      name: "Fasilitas & Layanan",
+    }).parentElement!;
+    const data = bagianTentang("Fasilitas & Layanan")!.daftar!;
+    const item = within(fasilitas).getAllByRole("listitem");
+    expect(item.map((li) => li.textContent)).toEqual(data);
+    item.forEach((li, i) => {
+      const titik = data[i].indexOf(":");
+      const label = li.querySelector("strong");
+      if (titik < 0) expect(label).toBeNull();
+      else expect(label?.textContent).toBe(data[i].slice(0, titik + 1));
+    });
+
+    // Keputusan 4: tanpa tautan peta.
+    expect(container.textContent).not.toMatch(/peta/i);
+    expect(container.querySelector('a[href*="maps"]')).toBeNull();
+
+    // Keputusan 5: kartu CTA bersama beranda (BR-03).
+    const cta = screen.getByRole("region", { name: /Daftar Sekarang/ });
+    expect(within(cta).getByRole("link", { name: "Daftar Anggota" }).getAttribute("href")).toBe(
+      "/daftar",
+    );
+  });
+
+  it("FR_KTL_05_tentang_penanda_tampil_di_setiap_slot_bagian", () => {
+    // Bila satu bagian kehilangan datanya (`menunggu` terisi), slotnya wajib menampilkan penanda,
+    // tidak boleh kosong diam-diam (halaman tidak lolos UAT selama penanda ada).
+    for (const { judul } of BAGIAN_TENTANG) {
+      const bagian = BAGIAN_TENTANG.map((b) =>
+        b.judul === judul ? { judul, menunggu: `uji ${judul}` } : b,
+      );
+      const { container } = render(<IsiTentang bagian={bagian} />);
+      const slot = screen.getByRole("heading", { level: 2, name: judul }).parentElement!;
+      const penanda = slot.querySelectorAll("[data-penanda]");
+      expect(penanda, judul).toHaveLength(1);
+      expect(penanda[0].textContent).toBe(
+        `[PENANDA] Menunggu data dari pengelola perpustakaan: uji ${judul}.`,
+      );
+      expect(container.querySelectorAll("[data-penanda]"), judul).toHaveLength(1);
+      cleanup();
+    }
   });
 });
