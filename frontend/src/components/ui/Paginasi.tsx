@@ -8,8 +8,11 @@ type Props = {
   perHalaman: number;
   /** Path halaman daftar, mis. "/anggota/riwayat"; nomor halaman ditambahkan sebagai `?halaman=`. */
   path: string;
-  /** Parameter lain yang dipertahankan di setiap tautan (mis. filter daftar tagihan). */
-  params?: Record<string, string | undefined>;
+  /**
+   * Parameter lain yang dipertahankan di setiap tautan (mis. filter daftar tagihan). Nilai daftar ditulis
+   * berulang dengan urutan tetap (mis. `kategori_id` katalog, OQ-44); nilai kosong dilewati.
+   */
+  params?: Record<string, string | string[] | undefined>;
 };
 
 const KELAS =
@@ -20,7 +23,10 @@ export function Paginasi({ halaman, total, perHalaman, path, params = {} }: Prop
   const akhir = jumlahHalaman(total, perHalaman);
   const ke = (n: number) => {
     const q = new URLSearchParams();
-    for (const [k, v] of Object.entries(params)) if (v) q.set(k, v);
+    for (const [k, v] of Object.entries(params)) {
+      if (Array.isArray(v)) for (const x of v) q.append(k, x);
+      else if (v) q.set(k, v);
+    }
     q.set("halaman", String(n));
     return `${path}?${q.toString()}`;
   };

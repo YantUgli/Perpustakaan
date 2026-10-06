@@ -9,11 +9,12 @@ import { CoverBuku } from "./CoverBuku";
 /**
  * FR-KTL-01: satu judul di katalog dengan SEMUA isian (cover, judul, penulis, penerbit, tahun, kategori, ISBN,
  * rak, harga, ketersediaan) dalam bentuk ringkas. Semua dari `JudulKatalogKeluar` apa adanya.
+ * Susulan OQ-44: vertikal seperti hal-03 (sampul di atas, tengah), badge teks lengkap "X dari Y eksemplar tersedia".
  */
 export function KartuBuku({ judul: j }: { judul: JudulKatalog }) {
   return (
-    <article className="flex gap-4 rounded-xl border border-line bg-surface p-4">
-      <CoverBuku coverUrl={j.cover_url} className="aspect-5/8 w-22 shrink-0 self-start" />
+    <article className="flex h-full flex-col gap-3 rounded-xl border border-line bg-surface p-4">
+      <CoverBuku coverUrl={j.cover_url} className="aspect-5/8 w-28 shrink-0 self-center" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="self-start rounded-full bg-navy/5 px-2.5 py-0.5 text-xs text-navy/80">
           {j.kategori.nama}
@@ -36,7 +37,7 @@ export function KartuBuku({ judul: j }: { judul: JudulKatalog }) {
           <dt className="text-navy/60">Harga</dt>
           <dd className="angka">{formatRupiah(j.harga)}</dd>
         </dl>
-        <div className="mt-1">
+        <div className="mt-auto pt-1">
           <BadgeKetersediaan judul={j} />
         </div>
       </div>
