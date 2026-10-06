@@ -1,4 +1,4 @@
-"""Katalog publik & pencarian: FR-KTL-01..04, BR-01, NFR-PRF-01.
+"""Katalog publik & pencarian: FR-KTL-01..04, BR-01, NFR-PRF-01, OQ-44 (filter & urutan).
 
 Fungsi `cari_judul` sengaja tidak bergantung pada siapa pemanggilnya agar bisa dipakai ulang
 halaman admin tanpa logika pencarian kedua. Data per eksemplar (kode, status per salinan) dan data
@@ -6,8 +6,9 @@ peminjam tidak pernah keluar dari sini; yang keluar hanya agregat dan daftar rak
 """
 
 from dataclasses import dataclass
+from typing import Literal
 
-from sqlalchemy import ColumnElement, func, or_, select
+from sqlalchemy import ColumnElement, false, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.galat import GalatBisnis
@@ -103,22 +104,94 @@ def _lengkapi(db: Session, daftar: list[JudulBuku]) -> list[JudulKatalog]:
     return hasil
 
 
+Urutan = Literal["judul_az", "tahun_terbaru", "tahun_terlama"]
+
+# Rentang kolom PostgreSQL: `tahun` INTEGER, `kategori_id` BIGINT. Nilai di luarnya tidak dikirim
+# sebagai parameter (PostgreSQL menolak "out of range" → 500); artinya pasti: tak ada baris cocok.
+_INT4_MAKS = 2**31 - 1
+_INT8_MIN, _INT8_MAKS = -(2**63), 2**63 - 1
+
+# ASUMSI(OQ-44): seri selalu dipecah lower(judul) lalu id agar paginasi stabil.
+_URUTAN: dict[str, tuple] = {
+    "judul_az": (func.lower(JudulBuku.judul), JudulBuku.id),
+    "tahun_terbaru": (JudulBuku.tahun.desc(), func.lower(JudulBuku.judul), JudulBuku.id),
+    "tahun_terlama": (JudulBuku.tahun.asc(), func.lower(JudulBuku.judul), JudulBuku.id),
+}
+
+
+def periksa_rentang_tahun(tahun_dari: int | None, tahun_sampai: int | None) -> None:
+    """ASUMSI(OQ-44, pola OQ-38): kedua batas opsional & inklusif; `dari > sampai` ditolak."""
+    if tahun_dari is not None and tahun_sampai is not None and tahun_dari > tahun_sampai:
+        raise GalatBisnis(
+            kode="KTL_RENTANG_TAHUN_TIDAK_VALID",
+            pesan=f"Rentang tahun tidak valid: tahun awal {tahun_dari} "
+            f"setelah tahun akhir {tahun_sampai}.",
+            rujukan="OQ-44",
+            status_code=422,
+        )
+
+
+def _filter(
+    q: str | None,
+    kategori_id: list[int] | None,
+    tersedia: bool,
+    tahun_dari: int | None,
+    tahun_sampai: int | None,
+) -> list[ColumnElement[bool]]:
+    """FR-KTL-02 + ASUMSI(OQ-44): semua syarat digabung AND dengan kata kunci `q` (OQ-24)."""
+    kondisi = [k for k in [filter_kata_kunci(q)] if k is not None]
+    if kategori_id is not None:
+        # Id tak dikenal (termasuk di luar rentang BIGINT) → tidak ada yang cocok → daftar kosong
+        # (decisions §B). `in_([])` dirender SQLAlchemy sebagai kondisi yang selalu salah.
+        sah = [k for k in kategori_id if _INT8_MIN <= k <= _INT8_MAKS]
+        kondisi.append(JudulBuku.kategori_id.in_(sah))
+    if tersedia:
+        kondisi.append(
+            select(Eksemplar.id)
+            .where(
+                Eksemplar.judul_buku_id == JudulBuku.id,
+                Eksemplar.status == StatusEksemplar.TERSEDIA,
+            )
+            .exists()
+        )
+    # Tanpa batas atas tahun (OQ-10): tahun > INT4 maksimum tetap 200. `tahun_dari` di atasnya tak
+    # mungkin terpenuhi; `tahun_sampai` di atasnya tidak membatasi apa pun.
+    if tahun_dari is not None:
+        kondisi.append(JudulBuku.tahun >= tahun_dari if tahun_dari <= _INT4_MAKS else false())
+    if tahun_sampai is not None and tahun_sampai <= _INT4_MAKS:
+        kondisi.append(JudulBuku.tahun <= tahun_sampai)
+    return kondisi
+
+
 def cari_judul(
-    db: Session, *, q: str | None, halaman: int, per_halaman: int
+    db: Session,
+    *,
+    q: str | None,
+    halaman: int,
+    per_halaman: int,
+    kategori_id: list[int] | None = None,
+    tersedia: bool = False,
+    tahun_dari: int | None = None,
+    tahun_sampai: int | None = None,
+    urut: Urutan = "judul_az",
 ) -> tuple[list[JudulKatalog], int]:
-    """FR-KTL-01/02/04: daftar judul berhalaman, urut judul A–Z lalu id."""
-    kondisi = filter_kata_kunci(q)
-    q_total = select(func.count()).select_from(JudulBuku)
+    """FR-KTL-01/02/04: daftar judul berhalaman, bawaan urut judul A–Z lalu id.
+
+    ASUMSI(OQ-44): filter kategori (salah satu dari daftar), `tersedia` (≥ 1 eksemplar Tersedia),
+    rentang tahun terbit inklusif, dan urutan tahun terbit; tanpa parameter tambahan perilaku sama
+    dengan sebelumnya. `total` dihitung dari kondisi yang sama dengan data.
+    """
+    periksa_rentang_tahun(tahun_dari, tahun_sampai)
+    kondisi = _filter(q, kategori_id, tersedia, tahun_dari, tahun_sampai)
+    total = db.scalar(select(func.count()).select_from(JudulBuku).where(*kondisi))
     q_data = (
         select(JudulBuku)
         .options(joinedload(JudulBuku.kategori))
-        .order_by(func.lower(JudulBuku.judul), JudulBuku.id)
+        .where(*kondisi)
+        .order_by(*_URUTAN[urut])
         .offset((halaman - 1) * per_halaman)
         .limit(per_halaman)
     )
-    if kondisi is not None:
-        q_total, q_data = q_total.where(kondisi), q_data.where(kondisi)
-    total = db.scalar(q_total)
     return _lengkapi(db, list(db.scalars(q_data))), total
 
 

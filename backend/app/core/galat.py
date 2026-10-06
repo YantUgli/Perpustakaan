@@ -66,6 +66,7 @@ _PESAN_BATAS = {  # tipe → (kunci ctx, templat); ctx berisi batas skema, bukan
     "less_than": ("lt", "Harus kurang dari {}."),
     "string_too_short": ("min_length", "Minimal {} karakter."),
     "string_too_long": ("max_length", "Maksimal {} karakter."),
+    "too_long": ("max_length", "Maksimal {} item."),  # daftar, mis. `kategori_id` (OQ-44)
 }
 _PESAN_CADANGAN = "Nilai tidak valid."
 

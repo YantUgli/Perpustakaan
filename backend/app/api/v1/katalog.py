@@ -1,9 +1,9 @@
-"""Router publik katalog (BR-01, FR-KTL-01..04, OQ-43): tanpa login.
+"""Router publik katalog (BR-01, FR-KTL-01..04, OQ-43, OQ-44): tanpa login.
 
 Setiap route di sini wajib tercantum di `ROUTE_PUBLIK` (tests/test_autentikasi.py).
 """
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
@@ -24,8 +24,29 @@ def cari_judul(
     q: Annotated[str | None, Query(description="Judul, penulis, ISBN, atau kategori")] = None,
     halaman: Annotated[int, Query(ge=1)] = 1,
     per_halaman: Annotated[int, Query(ge=1, le=100)] = 20,
+    kategori_id: Annotated[
+        list[int] | None,
+        Query(max_length=100, description="Boleh berulang; judul berkategori salah satunya"),
+    ] = None,
+    tersedia: Annotated[
+        Literal["true"] | None, Query(description="Hanya judul dengan ≥ 1 eksemplar Tersedia")
+    ] = None,
+    tahun_dari: Annotated[int | None, Query(ge=1, description="Tahun terbit, inklusif")] = None,
+    tahun_sampai: Annotated[int | None, Query(ge=1, description="Tahun terbit, inklusif")] = None,
+    urut: Annotated[katalog.Urutan, Query()] = "judul_az",
 ):
-    data, total = katalog.cari_judul(db, q=q, halaman=halaman, per_halaman=per_halaman)
+    """FR-KTL-02/04. ASUMSI(OQ-44): filter & urutan opsional, digabung AND dengan `q`."""
+    data, total = katalog.cari_judul(
+        db,
+        q=q,
+        halaman=halaman,
+        per_halaman=per_halaman,
+        kategori_id=kategori_id,
+        tersedia=tersedia == "true",
+        tahun_dari=tahun_dari,
+        tahun_sampai=tahun_sampai,
+        urut=urut,
+    )
     return HalamanKatalog(
         data=[JudulKatalogKeluar.dari(j) for j in data],
         total=total,
