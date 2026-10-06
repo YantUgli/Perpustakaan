@@ -36,7 +36,7 @@ export function HeaderPublik({ sesi }: { sesi: Sesi | null }) {
       <div
         className={`${KONTAINER} flex flex-wrap items-center gap-x-8 gap-y-3 py-3 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:py-4`}
       >
-        <Link href="/" aria-label="Naratif — Beranda" className="justify-self-start">
+        <Link href="/" aria-label="Naratif Perpustakaan, Beranda" className="justify-self-start">
           <Logo ukuran="responsif" />
         </Link>
         <nav aria-label="Menu utama" className="order-3 w-full sm:order-none sm:w-auto">
