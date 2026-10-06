@@ -108,6 +108,62 @@ const PATH = {
       d="M6 5a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v7H6ZM1 11a2 2 0 0 1 4 0v3h14v-3a2 2 0 0 1 4 0v6H1Zm2 7h2.5v3H3Zm15.5 0H21v3h-2.5Z"
     />
   ),
+  /** Timbangan (Tentang: layanan adil). Tali garis, lengan & mangkuk solid. */
+  timbanganIsi: (
+    <>
+      <path d="M5 8 2 14M5 8l3 6M19 8l-3 6M19 8l3 6" />
+      <path
+        fill="currentColor"
+        stroke="none"
+        d="M11 3h2v16h-2ZM3.5 6.5h17v2h-17ZM1.5 14.5h7a3.5 3.5 0 0 1-7 0Zm14 0h7a3.5 3.5 0 0 1-7 0ZM7 19.5h10V22H7Z"
+      />
+    </>
+  ),
+  /** Tunas daun (Tentang: menjaga koleksi agar terawat). */
+  daunIsi: (
+    <>
+      <path d="M12 21v-9" strokeWidth="2" />
+      <path
+        fill="currentColor"
+        stroke="none"
+        d="M11.5 14C11.5 8.8 8.2 5.5 2.5 5.5c0 5.5 3.3 8.5 9 8.5Zm1-2.5c0-4.6 3.1-7.7 9-7.7 0 5-3.1 7.7-9 7.7Z"
+      />
+    </>
+  ),
+  /** Gelembung percakapan (Tentang: bantuan petugas). */
+  bantuanIsi: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M4.5 3h15A2.5 2.5 0 0 1 22 5.5v9a2.5 2.5 0 0 1-2.5 2.5H12l-5.5 4.5V17h-2A2.5 2.5 0 0 1 2 14.5v-9A2.5 2.5 0 0 1 4.5 3Z"
+    />
+  ),
+  /** Penanda lokasi (Tentang: alamat). */
+  pinIsi: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      fillRule="evenodd"
+      d="M12 1.5a7.5 7.5 0 0 0-7.5 7.5c0 5.4 7.5 13.5 7.5 13.5s7.5-8.1 7.5-13.5A7.5 7.5 0 0 0 12 1.5Zm0 4.75a2.75 2.75 0 1 1 0 5.5 2.75 2.75 0 0 1 0-5.5Z"
+    />
+  ),
+  /** Jam (Tentang: jam buka). */
+  jamIsi: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      fillRule="evenodd"
+      d="M12 1.5a10.5 10.5 0 1 0 0 21 10.5 10.5 0 0 0 0-21ZM11 6h2v5.45l3.9 2.25-1 1.73-4.9-2.83Z"
+    />
+  ),
+  /** Gagang telepon (Tentang: kontak). */
+  teleponIsi: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M6.2 2.2 9.4 2l1.9 4.9-2.4 1.9a12.5 12.5 0 0 0 6.3 6.3l1.9-2.4 4.9 1.9-.2 3.2a2.4 2.4 0 0 1-2.5 2.2A17.5 17.5 0 0 1 4 4.7a2.4 2.4 0 0 1 2.2-2.5Z"
+    />
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type NamaIkon = keyof typeof PATH;

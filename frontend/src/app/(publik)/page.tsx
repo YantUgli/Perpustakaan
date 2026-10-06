@@ -5,7 +5,8 @@ import { ikonKategori } from "@/components/katalog/ikon-kategori";
 import { KartuBukuRingkas } from "@/components/katalog/KartuBukuRingkas";
 import { Ikon, type NamaIkon } from "@/components/ui/Ikon";
 import { KosongState } from "@/components/ui/KosongState";
-import { IkonLogo } from "@/components/ui/Logo";
+import { KartuCtaDaftar } from "@/components/publik/KartuCtaDaftar";
+import { PanelHero } from "@/components/publik/PanelHero";
 import { TautanTombol } from "@/components/ui/Tombol";
 import { ambilServer } from "@/lib/api-server";
 import { bagianTentang } from "@/lib/info-perpustakaan";
@@ -159,59 +160,8 @@ export default async function Beranda() {
           ))}
         </ul>
 
-        <section
-          aria-labelledby="judul-cta"
-          className="relative overflow-hidden rounded-2xl bg-navy p-6 text-ivory sm:p-8"
-        >
-          <span aria-hidden="true" className="absolute -right-10 -bottom-8 text-ivory opacity-10">
-            <IkonLogo className="h-40" />
-          </span>
-          <div className="relative flex flex-col gap-3">
-            <p className="text-xs font-semibold tracking-[0.2em] text-gold uppercase">
-              Jadi Bagian dari Naratif
-            </p>
-            <h2
-              id="judul-cta"
-              className="font-display text-2xl sm:text-3xl lg:text-4xl lg:font-semibold"
-            >
-              Daftar Sekarang, Mulai Perjalanan Membaca Anda
-            </h2>
-            <p className="text-sm text-ivory/85">
-              Daftar secara online dan akun anggota langsung aktif, lalu pinjam buku fisik di
-              perpustakaan.
-            </p>
-            <TautanTombol href="/daftar" className="mt-2 self-start">
-              Daftar Anggota
-              <Ikon nama="panah" className="size-4" />
-            </TautanTombol>
-          </div>
-        </section>
+        <KartuCtaDaftar />
       </div>
     </>
-  );
-}
-
-/**
- * Panel kanan hero (D1a diperhalus: dekoratif CSS, tanpa foto). Bidang ±57% lebar layar di belakang ujung kolom
- * cari: gradasi dari ivory (sama dengan latar hero) makin pekat ke kanan + pendaran lembut, tepi kirinya dipudarkan
- * dengan mask sehingga gradasi, watermark, dan tagline menyatu tanpa garis pemisah. Hanya `lg` ke atas.
- */
-function PanelHero() {
-  return (
-    <div
-      aria-hidden="true"
-      className="absolute inset-y-0 right-0 hidden w-[57%] bg-linear-to-r from-ivory via-line/30 to-line/60 mask-l-from-65% mask-l-to-100% lg:block"
-    >
-      <div className="absolute inset-0 bg-radial-[at_70%_35%] from-surface/70 to-transparent to-60%" />
-      <div className="absolute inset-0 bg-radial-[at_90%_85%] from-gold/15 to-transparent to-55%" />
-      <IkonLogo className="absolute right-12 bottom-10 h-56 text-navy opacity-[0.06]" />
-      <div className="absolute top-1/2 right-[10%] flex -translate-y-1/2 flex-col gap-4">
-        <p className="font-display text-4xl leading-snug text-navy italic 2xl:text-5xl">
-          Lebih Banyak Cerita,
-          <span className="block">Lebih Luas Dunia.</span>
-        </p>
-        <span className="block h-0.5 w-16 bg-gold" />
-      </div>
-    </div>
   );
 }
