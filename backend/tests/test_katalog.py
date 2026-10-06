@@ -1,6 +1,7 @@
 """WP 5.3.2 — katalog publik & pencarian.
 
-FR-KTL-01..04, BR-01, NFR-PRF-01, OQ-13, OQ-22..24, OQ-43 (daftar kategori publik).
+FR-KTL-01..04, BR-01, NFR-PRF-01, OQ-13, OQ-22..24, OQ-43 (daftar kategori publik),
+OQ-44 (filter & urutan katalog).
 """
 
 import io
@@ -10,9 +11,10 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import JudulBuku
+from app.models import JudulBuku, Kategori
 from app.models.status import StatusEksemplar
 from app.seed.data_uji import seed_performa
 from tests import pabrik
@@ -336,6 +338,253 @@ def test_NFR_PRF_01_pencarian_10000_eksemplar_maks_2_detik(client, db: Session, 
 
     with capsys.disabled():
         print("\nNFR-PRF-01 durasi (detik):", {k: round(v, 3) for k, v in durasi.items()})
+    assert max(durasi.values()) <= 2.0
+
+
+# ------------------------------------------------- filter & urutan katalog (FR-KTL-02, OQ-44)
+
+
+def _juduls(h: dict) -> list[str]:
+    return [b["judul"] for b in h["data"]]
+
+
+def _galat(r, status: int = 422) -> dict:
+    assert r.status_code == status, r.text
+    return r.json()["detail"]
+
+
+def test_FR_KTL_02_OQ_44_tanpa_parameter_baru_sama_dengan_sebelumnya(client, db: Session):
+    p = _penanda()
+    for nama, tahun in [("delta", 2001), ("Alfa", 2024), ("charlie", 1999), ("Bravo", 2010)]:
+        pabrik.judul(db, judul=f"{nama} {p}", tahun=tahun)
+    polos = _cari(client, p)
+    eksplisit = _cari(client, p, urut="judul_az")
+    assert _juduls(polos) == [f"{n} {p}" for n in ["Alfa", "Bravo", "charlie", "delta"]]
+    assert polos == eksplisit
+
+
+def test_OQ_44_filter_kategori_satu(client, db: Session):
+    p = _penanda()
+    k1, k2 = pabrik.kategori(db), pabrik.kategori(db)
+    pabrik.judul(db, judul=f"A {p}", kategori_id=k1.id)
+    pabrik.judul(db, judul=f"B {p}", kategori_id=k2.id)
+    h = _cari(client, p, kategori_id=k1.id)
+    assert (_juduls(h), h["total"]) == ([f"A {p}"], 1)
+
+
+def test_OQ_44_filter_kategori_berulang_salah_satu(client, db: Session):
+    p = _penanda()
+    k1, k2, k3 = pabrik.kategori(db), pabrik.kategori(db), pabrik.kategori(db)
+    for nama, k in [("A", k1), ("B", k2), ("C", k3)]:
+        pabrik.judul(db, judul=f"{nama} {p}", kategori_id=k.id)
+    h = _cari(client, p, kategori_id=[k1.id, k3.id])
+    assert (_juduls(h), h["total"]) == ([f"A {p}", f"C {p}"], 2)
+
+
+def test_OQ_44_filter_kategori_tak_dikenal_daftar_kosong(client, db: Session):
+    p = _penanda()
+    pabrik.judul(db, judul=f"A {p}")
+    h = _cari(client, p, kategori_id=999_999_999)
+    assert (h["data"], h["total"]) == ([], 0)
+
+
+def test_OQ_44_kategori_id_di_luar_rentang_bigint_200_daftar_kosong(client, db: Session):
+    p = _penanda()
+    pabrik.judul(db, judul=f"A {p}")
+    h = _cari(client, p, kategori_id=[2**63, -(2**63) - 1])
+    assert (h["data"], h["total"]) == ([], 0)
+
+
+def test_OQ_44_kategori_id_bukan_bilangan_422(client):
+    d = _galat(client.get(API, params={"kategori_id": "abc"}))
+    assert d["kode"] == "VALIDASI_ISIAN"
+    assert d["isian"]["kategori_id"] == "Harus berupa bilangan bulat."
+
+
+def test_OQ_44_kategori_id_lebih_dari_100_item_422_pesan_spesifik(client):
+    r = client.get(API, params={"kategori_id": list(range(1, 102))})
+    d = _galat(r)
+    assert d["kode"] == "VALIDASI_ISIAN"
+    assert d["isian"]["kategori_id"] == "Maksimal 100 item."
+
+
+def test_OQ_44_kategori_id_tepat_100_item_diterima(client):
+    assert client.get(API, params={"kategori_id": list(range(1, 101))}).status_code == 200
+
+
+def test_OQ_44_filter_tersedia_hanya_judul_dengan_eksemplar_tersedia(client, db: Session):
+    p = _penanda()
+    st = StatusEksemplar
+    _judul_dengan_eksemplar(db, [st.TERSEDIA], judul=f"A satu tersedia {p}")
+    _judul_dengan_eksemplar(db, [st.DIPINJAM, st.TERSEDIA, st.RUSAK], judul=f"B campuran {p}")
+    _judul_dengan_eksemplar(db, [st.DIPINJAM, st.DIPINJAM], judul=f"C semua dipinjam {p}")
+    _judul_dengan_eksemplar(db, [st.HILANG, st.RUSAK], judul=f"D hilang rusak {p}")
+    _judul_dengan_eksemplar(db, [], judul=f"E tanpa eksemplar {p}")
+    h = _cari(client, p, tersedia="true")
+    assert _juduls(h) == [f"A satu tersedia {p}", f"B campuran {p}"]
+    assert h["total"] == 2
+    assert all(b["tersedia"] >= 1 for b in h["data"])
+
+
+@pytest.mark.parametrize("nilai", ["false", "1", "True", "ya", "on", ""])
+def test_OQ_44_tersedia_nilai_selain_true_422(client, nilai):
+    d = _galat(client.get(API, params={"tersedia": nilai}))
+    assert d["kode"] == "VALIDASI_ISIAN"
+    assert "tersedia" in d["isian"]
+
+
+def _judul_tahun(db: Session, p: str) -> None:
+    for tahun in [1999, 2000, 2005, 2010, 2011]:
+        pabrik.judul(db, judul=f"T{tahun} {p}", tahun=tahun)
+
+
+def test_OQ_44_filter_tahun_inklusif_kedua_batas(client, db: Session):
+    p = _penanda()
+    _judul_tahun(db, p)
+    h = _cari(client, p, tahun_dari=2000, tahun_sampai=2010)
+    assert (_juduls(h), h["total"]) == ([f"T2000 {p}", f"T2005 {p}", f"T2010 {p}"], 3)
+
+
+@pytest.mark.parametrize(
+    ("params", "harapan"),
+    [({"tahun_dari": 2010}, [2010, 2011]), ({"tahun_sampai": 2000}, [1999, 2000])],
+)
+def test_OQ_44_filter_tahun_satu_sisi(client, db: Session, params, harapan):
+    p = _penanda()
+    _judul_tahun(db, p)
+    assert _juduls(_cari(client, p, **params)) == [f"T{t} {p}" for t in harapan]
+
+
+def test_OQ_44_tahun_dari_sama_dengan_sampai_diterima(client, db: Session):
+    p = _penanda()
+    _judul_tahun(db, p)
+    assert _juduls(_cari(client, p, tahun_dari=2005, tahun_sampai=2005)) == [f"T2005 {p}"]
+
+
+def test_OQ_44_tahun_dari_lebih_besar_422_menyebut_kedua_tahun(client):
+    d = _galat(client.get(API, params={"tahun_dari": 2024, "tahun_sampai": 2020}))
+    assert d["kode"] == "KTL_RENTANG_TAHUN_TIDAK_VALID"
+    assert d["rujukan"] == "OQ-44"
+    assert "2024" in d["pesan"] and "2020" in d["pesan"]
+
+
+@pytest.mark.parametrize("isian", ["tahun_dari", "tahun_sampai"])
+def test_OQ_44_tahun_bukan_bilangan_422(client, isian):
+    d = _galat(client.get(API, params={isian: "dua ribu"}))
+    assert (d["kode"], d["isian"][isian]) == ("VALIDASI_ISIAN", "Harus berupa bilangan bulat.")
+
+
+@pytest.mark.parametrize("isian", ["tahun_dari", "tahun_sampai"])
+def test_OQ_44_tahun_0_ditolak_minimal_1(client, isian):
+    d = _galat(client.get(API, params={isian: 0}))
+    assert (d["kode"], d["isian"][isian]) == ("VALIDASI_ISIAN", "Minimal 1.")
+
+
+def test_OQ_44_tahun_sangat_besar_200_data_kosong(client, db: Session):
+    p = _penanda()
+    _judul_tahun(db, p)
+    h = _cari(client, p, tahun_dari=99_999_999_999)
+    assert (h["data"], h["total"]) == ([], 0)
+    assert _cari(client, p, tahun_sampai=99_999_999_999)["total"] == 5  # tanpa batas atas (OQ-10)
+
+
+def _judul_urut(db: Session, p: str) -> None:
+    # Seri tahun 2010: urut lower(judul) lalu id ("beta" dua kali → id lebih kecil dulu).
+    for nama, tahun in [("beta", 2010), ("Alfa", 2010), ("gamma", 1990), ("Delta", 2024)]:
+        pabrik.judul(db, judul=f"{nama} {p}", tahun=tahun)
+    pabrik.judul(db, judul=f"beta {p}", tahun=2010, penulis="Penulis Kedua")
+
+
+def test_OQ_44_urut_tahun_terbaru_seri_judul_lalu_id(client, db: Session):
+    p = _penanda()
+    _judul_urut(db, p)
+    h = _cari(client, p, urut="tahun_terbaru")
+    assert [(b["judul"].split()[0], b["tahun"]) for b in h["data"]] == [
+        ("Delta", 2024),
+        ("Alfa", 2010),
+        ("beta", 2010),
+        ("beta", 2010),
+        ("gamma", 1990),
+    ]
+    beta = [b for b in h["data"] if b["judul"].startswith("beta")]
+    assert beta[0]["id"] < beta[1]["id"]
+
+
+def test_OQ_44_urut_tahun_terlama(client, db: Session):
+    p = _penanda()
+    _judul_urut(db, p)
+    h = _cari(client, p, urut="tahun_terlama")
+    assert [b["judul"].split()[0] for b in h["data"]] == ["gamma", "Alfa", "beta", "beta", "Delta"]
+    beta = [b for b in h["data"] if b["judul"].startswith("beta")]
+    assert beta[0]["id"] < beta[1]["id"]
+
+
+@pytest.mark.parametrize("nilai", ["judul_za", "acak", "TAHUN_TERBARU", ""])
+def test_OQ_44_urut_tidak_sah_422(client, nilai):
+    d = _galat(client.get(API, params={"urut": nilai}))
+    assert d["kode"] == "VALIDASI_ISIAN"
+    assert d["isian"]["urut"] == ("Harus salah satu dari: judul_az, tahun_terbaru, tahun_terlama.")
+
+
+def test_FR_KTL_02_OQ_44_gabungan_q_dan_semua_filter_total_dan_paginasi(client, db: Session):
+    p = _penanda()
+    k1, k2, k_lain = pabrik.kategori(db), pabrik.kategori(db), pabrik.kategori(db)
+    st = StatusEksemplar
+    lolos = []
+    for i, (k, tahun) in enumerate([(k1, 2001), (k2, 2015), (k1, 2008), (k2, 2020), (k1, 2003)]):
+        _judul_dengan_eksemplar(db, [st.TERSEDIA], judul=f"L{i} {p}", kategori_id=k.id, tahun=tahun)
+        lolos.append((tahun, f"L{i} {p}"))
+    # Masing-masing gagal tepat satu syarat:
+    _judul_dengan_eksemplar(
+        db, [st.TERSEDIA], judul=f"X kategori {p}", kategori_id=k_lain.id, tahun=2010
+    )
+    _judul_dengan_eksemplar(
+        db, [st.DIPINJAM], judul=f"X dipinjam {p}", kategori_id=k1.id, tahun=2010
+    )
+    _judul_dengan_eksemplar(db, [st.TERSEDIA], judul=f"X tahun {p}", kategori_id=k1.id, tahun=1999)
+    _judul_dengan_eksemplar(
+        db, [st.TERSEDIA], judul="X kata kunci lain", kategori_id=k1.id, tahun=2010
+    )
+
+    params = {
+        "kategori_id": [k1.id, k2.id],
+        "tersedia": "true",
+        "tahun_dari": 2000,
+        "tahun_sampai": 2020,
+        "urut": "tahun_terbaru",
+        "per_halaman": 2,
+    }
+    halaman = [_cari(client, p, halaman=n, **params) for n in (1, 2, 3)]
+    assert all(h["total"] == 5 for h in halaman)
+    gabung = [j for h in halaman for j in _juduls(h)]
+    assert gabung == [j for _, j in sorted(lolos, key=lambda x: -x[0])]
+    assert [len(h["data"]) for h in halaman] == [2, 2, 1]
+
+
+def test_NFR_PRF_01_OQ_44_kombinasi_filter_10000_eksemplar_maks_2_detik(
+    client, db: Session, capsys
+):
+    seed_performa(db, app_env="staging")
+    kategori = db.scalars(select(Kategori.id).where(Kategori.nama.in_(["Sejarah", "Sains"]))).all()
+    assert len(kategori) == 2
+    dasar = {"kategori_id": kategori, "tersedia": "true", "tahun_dari": 1990, "tahun_sampai": 2020}
+    client.get(API, params={"q": "a", **dasar})  # pemanasan koneksi/rencana query
+
+    durasi = {}
+    for q in ["a", "Pratama", "zzz-tidak-ada", ""]:
+        for urut in ["judul_az", "tahun_terbaru", "tahun_terlama"]:
+            for halaman in (1, 3):
+                mulai = time.perf_counter()
+                r = client.get(API, params={"q": q, "urut": urut, "halaman": halaman, **dasar})
+                durasi[f"{q or '∅'}/{urut}/h{halaman}"] = time.perf_counter() - mulai
+                assert r.status_code == 200, r.text
+
+    with capsys.disabled():
+        print(
+            "\nNFR-PRF-01 OQ-44 durasi maks/median (detik):",
+            round(max(durasi.values()), 3),
+            round(sorted(durasi.values())[len(durasi) // 2], 3),
+        )
     assert max(durasi.values()) <= 2.0
 
 
