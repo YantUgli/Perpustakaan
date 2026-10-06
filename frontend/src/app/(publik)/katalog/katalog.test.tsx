@@ -26,6 +26,8 @@ const { default: Katalog } = await import("./page");
 const { default: DetailBuku } = await import("./[id]/page");
 const { default: Tentang } = await import("../tentang/page");
 const { GalatApi } = await import("@/lib/galat");
+const { bagianTentang } = await import("@/lib/info-perpustakaan");
+const { ikonKategori, IKON_KATEGORI_BAWAAN } = await import("@/components/katalog/ikon-kategori");
 
 beforeEach(() => {
   respons.clear();
@@ -208,7 +210,7 @@ describe("Beranda / (FR-KTL-05, OQ-43)", () => {
     ]);
     respons.set("/katalog/judul?halaman=1&per_halaman=6", halamanKatalog([JUDUL]));
     render(await Beranda());
-    const bagian = screen.getByRole("region", { name: "Kategori" });
+    const bagian = screen.getByRole("region", { name: "Kategori Populer" });
     expect(
       within(bagian)
         .getByRole("link", { name: /Sains & Teknologi/ })
@@ -217,8 +219,8 @@ describe("Beranda / (FR-KTL-05, OQ-43)", () => {
     expect(within(bagian).getByRole("link", { name: /Fiksi/ }).getAttribute("href")).toBe(
       "/katalog?q=Fiksi",
     );
-    // OQ-43: judul bagian "Kategori", tanpa konsep "populer".
-    expect(screen.queryByText(/populer/i)).toBeNull();
+    // OQ-43 (perubahan 2026-10-06): judul "Kategori Populer" hanya label; tautan tetap /katalog?q=<nama>.
+    expect(screen.getByRole("heading", { level: 2, name: "Kategori Populer" })).toBeTruthy();
   });
 
   it("FR_KTL_05_beranda_kolom_cari_dan_cuplikan_koleksi_dari_api", async () => {
@@ -228,12 +230,123 @@ describe("Beranda / (FR-KTL-05, OQ-43)", () => {
     expect(screen.getByRole("search").getAttribute("action")).toBe("/katalog");
     expect(screen.getByText("Belum ada kategori")).toBeTruthy();
     const koleksi = screen.getByRole("region", { name: "Koleksi Buku" });
-    expect(within(koleksi).getByText("2 dari 5 eksemplar tersedia")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Daftar Sekarang" }).getAttribute("href")).toBe(
+    expect(within(koleksi).getByText("2 dari 5 tersedia")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Daftar Anggota" }).getAttribute("href")).toBe(
       "/daftar",
     );
     // Tanpa bagian di luar sumber (keputusan review): tanpa "terbaru"/"rekomendasi".
     expect(screen.queryByText(/terbaru|rekomendasi/i)).toBeNull();
+  });
+
+  it("OQ_43_beranda_semua_kategori_tampil_dengan_ikon_generik", async () => {
+    const nama = [
+      "Agama",
+      "Anak",
+      "Fiksi",
+      "Komputer",
+      "Nonfiksi",
+      "Referensi",
+      "Sains",
+      "Sejarah",
+    ];
+    respons.set(
+      "/katalog/kategori",
+      nama.map((n, i) => ({ id: i + 1, nama: n })),
+    );
+    respons.set("/katalog/judul?halaman=1&per_halaman=6", halamanKatalog([]));
+    render(await Beranda());
+    const tautan = within(screen.getByRole("region", { name: "Kategori Populer" })).getAllByRole(
+      "link",
+    );
+    // Semua kategori dari API, urutan apa adanya: "Populer" hanya label, tanpa penyaringan/peringkat.
+    expect(tautan.map((t) => t.textContent)).toEqual(nama);
+    // Ikon tiap kartu mengikuti ikonKategori(nama); kategori data uji tidak semuanya berikon sama.
+    const ikon = tautan.map((t) => t.querySelector("svg")?.innerHTML);
+    expect(new Set(ikon).size).toBe(nama.length);
+  });
+
+  it("OQ_43_ikon_kategori_dari_kata_kunci_nama_dengan_cadangan", () => {
+    expect(ikonKategori("Fiksi")).toBe("bukuIsi");
+    // "nonfiksi" tidak boleh tertangkap aturan "fiksi".
+    expect(ikonKategori("Nonfiksi")).toBe("bohlamIsi");
+    expect(ikonKategori("Non-Fiksi")).toBe("bohlamIsi");
+    expect(ikonKategori("  SEJARAH Indonesia ")).toBe("gedungIsi");
+    expect(ikonKategori("Sains")).toBe("atom");
+    expect(ikonKategori("Komputer")).toBe("laptopIsi");
+    expect(ikonKategori("Buku Anak")).toBe("beruangIsi");
+    expect(ikonKategori("Biografi")).toBe("orangIsi");
+    expect(ikonKategori("Agama")).toBe("lenteraIsi");
+    expect(ikonKategori("Referensi")).toBe("bukuTutupIsi");
+    // Nama tak dikenali (kategori baru/diganti nama admin) → ikon buku generik, bukan galat.
+    expect(ikonKategori("Pengembangan Diri")).toBe(IKON_KATEGORI_BAWAAN);
+    expect(ikonKategori("")).toBe(IKON_KATEGORI_BAWAAN);
+  });
+
+  it("FR_KTL_05_beranda_kartu_ringkas_cover_judul_penulis_kategori_ketersediaan", async () => {
+    respons.set("/katalog/kategori", []);
+    respons.set(
+      "/katalog/judul?halaman=1&per_halaman=6",
+      halamanKatalog([JUDUL, KOSONG_EKSEMPLAR]),
+    );
+    render(await Beranda());
+    const koleksi = screen.getByRole("region", { name: "Koleksi Buku" });
+    const [kartu, kartuKosong] = within(koleksi).getAllByRole("article");
+    expect(within(kartu).getByRole("link", { name: "Langit yang Sama" }).getAttribute("href")).toBe(
+      "/katalog/7",
+    );
+    expect(within(kartu).getByText("Sari Dewi")).toBeTruthy();
+    expect(within(kartu).getByText("Sejarah")).toBeTruthy();
+    // Keputusan 2026-10-06: teks ringkas di kartu beranda; teks lengkap tetap di `title`; hijau bila ada.
+    const badge = within(kartu).getByText("2 dari 5 tersedia");
+    expect(badge.getAttribute("title")).toBe("2 dari 5 eksemplar tersedia");
+    expect(badge.getAttribute("data-tersedia")).toBe("ya");
+    expect(badge.className).toContain("bg-status-tersedia-bg");
+    expect(kartu.querySelector("img")?.getAttribute("src")).toBe("/api/v1/katalog/judul/7/cover");
+    // X/Y apa adanya dari API; cover null → gambar pengganti; tanpa badge hijau "Tersedia".
+    // 0 tersedia: bukan hijau (tetap gold-700).
+    const badgeKosong = within(kartuKosong).getByText("0 dari 0 tersedia");
+    expect(badgeKosong.getAttribute("data-tersedia")).toBe("tidak");
+    expect(badgeKosong.className).not.toContain("status-tersedia");
+    expect(badgeKosong.className).toContain("text-gold-700");
+    expect(kartuKosong.querySelector('[data-cover="pengganti"]')).not.toBeNull();
+    expect(within(koleksi).queryByText(/^Tersedia$/)).toBeNull();
+    // D4: isian lengkap FR-KTL-01 hanya di /katalog & detail, tidak di kartu ringkas beranda.
+    expect(koleksi.textContent).not.toContain(JUDUL.isbn);
+    expect(koleksi.textContent).not.toContain(JUDUL.penerbit);
+    expect(koleksi.textContent).not.toContain("Rp98.000");
+  });
+
+  it("FR_KTL_05_beranda_hero_tentang_profil_dan_cta_daftar_BR_03", async () => {
+    respons.set("/katalog/kategori", []);
+    respons.set("/katalog/judul?halaman=1&per_halaman=6", halamanKatalog([]));
+    const { container } = render(await Beranda());
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "Temukan Buku, Jelajahi Pengetahuan",
+    );
+    // D1: panel hero dekoratif CSS, tanpa foto apa pun.
+    expect(container.querySelector("img")).toBeNull();
+    // D5: teks Tentang = paragraf Profil dari sumber bersama, bukan teks baru.
+    const tentang = screen.getByRole("region", { name: "Tentang Perpustakaan Naratif" });
+    const profil = bagianTentang("Profil")?.paragraf?.[0];
+    expect(profil).toBeTruthy();
+    expect(within(tentang).getByText(profil!)).toBeTruthy();
+    expect(
+      within(tentang).getByRole("link", { name: "Pelajari Lebih Lanjut" }).getAttribute("href"),
+    ).toBe("/tentang");
+    for (const t of [
+      "Katalog Daring Tanpa Login",
+      "Pinjam dengan QR Anggota",
+      "Ruang Baca di Tempat",
+    ]) {
+      expect(screen.getByText(t)).toBeTruthy();
+    }
+    const cta = screen.getByRole("region", { name: /Daftar Sekarang/ });
+    expect(cta.textContent).toContain("akun anggota langsung aktif");
+    expect(within(cta).getByRole("link", { name: "Daftar Anggota" }).getAttribute("href")).toBe(
+      "/daftar",
+    );
+    // Tanpa klaim di luar sumber (angka koleksi, kegiatan literasi).
+    expect(container.textContent).not.toMatch(/ribuan|kegiatan literasi/i);
   });
 });
 

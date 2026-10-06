@@ -8,6 +8,7 @@ import { TautanTombol } from "@/components/ui/Tombol";
 import { ambilServer } from "@/lib/api-server";
 import { formatAngka } from "@/lib/format";
 import { type HalamanKatalog, filterKatalogDariParam, queryKatalog } from "@/lib/katalog";
+import { KONTAINER } from "@/lib/tata-letak";
 
 export const metadata: Metadata = { title: "Katalog Buku" };
 
@@ -25,7 +26,7 @@ export default async function Katalog({
   const awal = (hasil.halaman - 1) * hasil.per_halaman + 1;
 
   return (
-    <section className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 sm:px-6">
+    <section className={`${KONTAINER} flex flex-col gap-6 py-10`}>
       <header className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="font-display text-3xl sm:text-4xl">Katalog Buku</h1>

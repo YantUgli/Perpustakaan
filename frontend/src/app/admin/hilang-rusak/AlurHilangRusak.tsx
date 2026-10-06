@@ -201,7 +201,7 @@ export function AlurHilangRusak() {
                 aria-selected={mode === m}
                 onClick={() => gantiMode(m)}
                 className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
-                  mode === m ? "bg-gold text-navy" : "text-navy/70 hover:bg-ivory"
+                  mode === m ? "bg-gold-700 text-white" : "text-navy/70 hover:bg-ivory"
                 }`}
               >
                 {m === "pindai-anggota" ? "Pindai Anggota" : "Pindai Buku"}

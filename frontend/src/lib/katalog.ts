@@ -37,9 +37,17 @@ export function tautanKategori(nama: string): string {
   return `/katalog?${new URLSearchParams({ q: nama }).toString()}`;
 }
 
-/** FR-KTL-03, OQ-23: X = `tersedia`, Y = `total` dari API apa adanya (judul tanpa eksemplar → "0 dari 0"). */
-export function teksKetersediaan(j: Pick<JudulKatalog, "tersedia" | "total">): string {
-  return `${formatAngka(j.tersedia)} dari ${formatAngka(j.total)} eksemplar tersedia`;
+/**
+ * FR-KTL-03, OQ-23: X = `tersedia`, Y = `total` dari API apa adanya (judul tanpa eksemplar → "0 dari 0").
+ * `ringkas` ("X dari Y tersedia", tanpa "eksemplar") hanya untuk kartu beranda yang sempit (keputusan
+ * 2026-10-06); /katalog dan detail memakai bentuk lengkap.
+ */
+export function teksKetersediaan(
+  j: Pick<JudulKatalog, "tersedia" | "total">,
+  ringkas = false,
+): string {
+  const satuan = ringkas ? "" : " eksemplar";
+  return `${formatAngka(j.tersedia)} dari ${formatAngka(j.total)}${satuan} tersedia`;
 }
 
 /** ASUMSI(OQ-22, OQ-08): satu rak = kode, ditambah lokasi bila ada. Urutan & keunikan dari API. */

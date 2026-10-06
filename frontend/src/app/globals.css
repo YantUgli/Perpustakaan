@@ -26,6 +26,9 @@
   --color-status-rusak: #5c5446;
   --color-status-rusak-bg: #eae5dc;
 
+  /* Lebar konten maksimum situs publik (hal-02/03: konten ±1708 px di layar 1920). Dipakai `KONTAINER`. */
+  --container-situs: 107.5rem; /* 1720 px */
+
   --font-display: var(--font-playfair), Georgia, serif;
   --font-sans: var(--font-inter), system-ui, sans-serif;
 }
