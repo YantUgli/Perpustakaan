@@ -4,9 +4,10 @@
  */
 
 /**
- * Isi dari data pemilik proyek (06/10/2026), disalin apa adanya KECUALI baris Fasilitas "Peminjaman buku fisik":
- * "maksimal 3 buku sekaligus" diubah menjadi "maksimal 3 buku dipinjam pada saat yang sama" (BR-08/FR-PJM-08,
- * keputusan Ayen 06/10/2026). Belum dikonfirmasi client lewat BA (progress.md 5.4.2). Semua bagian sudah terisi; bila kelak ada isian tanpa data, isi `menunggu` agar tampil
+ * Isi dari data pemilik proyek (06/10/2026), disalin apa adanya KECUALI baris Fasilitas
+ * "Peminjaman buku fisik": "maksimal 3 buku sekaligus" diubah menjadi "maksimal 3 buku dipinjam pada
+ * saat yang sama" (BR-08/FR-PJM-08, keputusan Ayen 06/10/2026). Belum dikonfirmasi client lewat BA
+ * (progress.md 5.4.2). Semua bagian sudah terisi; bila kelak ada isian tanpa data, isi `menunggu` agar tampil
  * sebagai teks penanda (`data-penanda`) dan halaman tidak lolos UAT selama penanda masih ada.
  * "Dalam Angka" dihapus: tidak ada angka dari pemilik proyek.
  */
