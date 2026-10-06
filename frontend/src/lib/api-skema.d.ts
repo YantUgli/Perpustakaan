@@ -111,7 +111,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Cari Judul */
+    /**
+     * Cari Judul
+     * @description FR-KTL-02/04. ASUMSI(OQ-44): filter & urutan opsional, digabung AND dengan `q`.
+     */
     get: operations["cari_judul_api_v1_katalog_judul_get"];
     put?: never;
     post?: never;
@@ -1957,6 +1960,15 @@ export interface operations {
         q?: string | null;
         halaman?: number;
         per_halaman?: number;
+        /** @description Boleh berulang; judul berkategori salah satunya */
+        kategori_id?: number[] | null;
+        /** @description Hanya judul dengan ≥ 1 eksemplar Tersedia */
+        tersedia?: "true" | null;
+        /** @description Tahun terbit, inklusif */
+        tahun_dari?: number | null;
+        /** @description Tahun terbit, inklusif */
+        tahun_sampai?: number | null;
+        urut?: "judul_az" | "tahun_terbaru" | "tahun_terlama";
       };
       header?: never;
       path?: never;

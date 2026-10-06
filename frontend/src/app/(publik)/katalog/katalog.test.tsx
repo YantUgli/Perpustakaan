@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const respons = new Map<string, unknown>();
@@ -15,10 +15,12 @@ vi.mock("@/lib/api-server", () => ({
 }));
 
 class TidakDitemukan extends Error {}
+const dorong = vi.fn();
 vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new TidakDitemukan("404");
   },
+  useRouter: () => ({ push: dorong }),
 }));
 
 const { default: Beranda } = await import("../page");
@@ -32,6 +34,9 @@ const { ikonKategori, IKON_KATEGORI_BAWAAN } = await import("@/components/katalo
 beforeEach(() => {
   respons.clear();
   dipanggil.length = 0;
+  dorong.mockClear();
+  // /katalog juga memuat daftar kategori untuk panel filter (OQ-44); test yang peduli menimpanya.
+  respons.set("/katalog/kategori", []);
 });
 afterEach(cleanup);
 
@@ -77,7 +82,7 @@ describe("Katalog /katalog (FR-KTL-01/02/04, IR-UI-05)", () => {
     const q = "  Bumi & Langit/100%";
     respons.set("/katalog/judul?q=++Bumi+%26+Langit%2F100%25&halaman=1", halamanKatalog([JUDUL]));
     render(await Katalog(params({ q })));
-    expect(dipanggil).toEqual(["/katalog/judul?q=++Bumi+%26+Langit%2F100%25&halaman=1"]);
+    expect(dipanggil).toContain("/katalog/judul?q=++Bumi+%26+Langit%2F100%25&halaman=1");
     // Isian q diisi dari URL apa adanya (tanpa trim).
     expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe(q);
   });
@@ -202,8 +207,284 @@ describe("Detail /katalog/[id] (FR-KTL-01/03)", () => {
   });
 });
 
+describe("Katalog /katalog — filter & urutan (OQ-44, hal-03/04)", () => {
+  const KATEGORI = Array.from({ length: 11 }, (_, i) => ({
+    id: i + 1,
+    nama: `Kategori ${String.fromCharCode(65 + i)}`,
+  }));
+  const SEMUA = {
+    q: "sejarah",
+    kategori_id: ["2", "10"],
+    tersedia: "true",
+    tahun_dari: "2000",
+    tahun_sampai: "2020",
+    urut: "tahun_terbaru",
+    halaman: "2",
+  };
+  const PATH_SEMUA =
+    "/katalog/judul?q=sejarah&kategori_id=2&kategori_id=10&tersedia=true&tahun_dari=2000" +
+    "&tahun_sampai=2020&urut=tahun_terbaru&halaman=2";
+  const URL_SEMUA =
+    "/katalog?q=sejarah&kategori_id=2&kategori_id=10&tersedia=true&tahun_dari=2000" +
+    "&tahun_sampai=2020&urut=tahun_terbaru";
+  const searchParams = (p: Record<string, string | string[]>) => ({
+    searchParams: Promise.resolve(p),
+  });
+  const renderSemua = async (data = halamanKatalog([JUDUL], 45, 2)) => {
+    respons.set("/katalog/kategori", KATEGORI);
+    respons.set(PATH_SEMUA, data);
+    return render(await Katalog(searchParams(SEMUA)));
+  };
+  const namaIsian = (form: HTMLElement) =>
+    [...form.querySelectorAll("input[type=hidden]")].map((e) => [
+      e.getAttribute("name"),
+      (e as HTMLInputElement).value,
+    ]);
+
+  it("OQ_44_semua_parameter_dikirim_ke_api_dan_kategori_dimuat", async () => {
+    await renderSemua();
+    expect(dipanggil).toEqual(expect.arrayContaining([PATH_SEMUA, "/katalog/kategori"]));
+  });
+
+  it("OQ_44_panel_filter_form_get_hidden_q_urut_tanpa_halaman", async () => {
+    await renderSemua();
+    const form = screen.getByRole("form", { name: "Filter Pencarian" });
+    expect(form.getAttribute("method")).toBe("get");
+    expect(form.getAttribute("action")).toBe("/katalog");
+    expect(namaIsian(form)).toEqual([
+      ["q", "sejarah"],
+      ["urut", "tahun_terbaru"],
+    ]);
+    expect(form.querySelector("[name=halaman]")).toBeNull();
+    expect(within(form).getByRole("button", { name: "Terapkan" })).toBeTruthy();
+  });
+
+  it("OQ_44_checkbox_dan_isian_sesuai_url", async () => {
+    await renderSemua();
+    const form = screen.getByRole("form", { name: "Filter Pencarian" });
+    const centang = (nama: string) =>
+      (within(form).getByRole("checkbox", { name: nama }) as HTMLInputElement).checked;
+    expect(centang("Kategori B")).toBe(true);
+    expect(centang("Kategori J")).toBe(true);
+    expect(centang("Kategori A")).toBe(false);
+    expect(centang("Tersedia sekarang")).toBe(true);
+    const cb = within(form).getByRole("checkbox", { name: "Kategori B" }) as HTMLInputElement;
+    expect([cb.name, cb.value]).toEqual(["kategori_id", "2"]);
+    const tersedia = within(form).getByRole("checkbox", { name: "Tersedia sekarang" });
+    expect([tersedia.getAttribute("name"), tersedia.getAttribute("value")]).toEqual([
+      "tersedia",
+      "true",
+    ]);
+    const dari = within(form).getByRole("textbox", {
+      name: "Tahun terbit dari",
+    }) as HTMLInputElement;
+    const sampai = within(form).getByRole("textbox", {
+      name: "Tahun terbit sampai",
+    }) as HTMLInputElement;
+    expect([dari.name, dari.value, dari.inputMode]).toEqual(["tahun_dari", "2000", "numeric"]);
+    expect([sampai.name, sampai.value]).toEqual(["tahun_sampai", "2020"]);
+    // Klien tidak memutuskan batas (IR-UI-04): tanpa min/max/pattern.
+    expect(["min", "max", "pattern"].some((a) => dari.hasAttribute(a))).toBe(false);
+  });
+
+  it("OQ_44_kategori_lebih_dari_8_lihat_lebih_banyak", async () => {
+    respons.set("/katalog/kategori", KATEGORI);
+    respons.set("/katalog/judul?halaman=1", halamanKatalog([JUDUL]));
+    render(await Katalog(searchParams({})));
+    const form = screen.getByRole("form", { name: "Filter Pencarian" });
+    const details = form.querySelector("details")!;
+    expect(details.querySelector("summary")!.textContent).toContain("Lihat lebih banyak");
+    const diLuar = (nama: string) =>
+      !details.contains(within(form).getByRole("checkbox", { name: nama }));
+    expect(KATEGORI.slice(0, 8).every((k) => diLuar(k.nama))).toBe(true);
+    expect(KATEGORI.slice(8).some((k) => diLuar(k.nama))).toBe(false);
+  });
+
+  it("OQ_44_kategori_tercentang_di_luar_8_teratas_tetap_tampil", async () => {
+    await renderSemua(); // Kategori J (id 10) tercentang, urutan ke-10
+    const form = screen.getByRole("form", { name: "Filter Pencarian" });
+    const details = form.querySelector("details")!;
+    expect(details.contains(within(form).getByRole("checkbox", { name: "Kategori J" }))).toBe(
+      false,
+    );
+    expect(details.contains(within(form).getByRole("checkbox", { name: "Kategori I" }))).toBe(true);
+  });
+
+  it("OQ_44_tanpa_details_bila_kategori_maks_8", async () => {
+    respons.set("/katalog/kategori", KATEGORI.slice(0, 8));
+    respons.set("/katalog/judul?halaman=1", halamanKatalog([JUDUL]));
+    render(await Katalog(searchParams({})));
+    expect(
+      screen.getByRole("form", { name: "Filter Pencarian" }).querySelector("details"),
+    ).toBeNull();
+  });
+
+  it("OQ_44_reset_semua_mempertahankan_q", async () => {
+    await renderSemua();
+    expect(screen.getByRole("link", { name: "Reset Semua" }).getAttribute("href")).toBe(
+      "/katalog?q=sejarah",
+    );
+  });
+
+  it("OQ_44_chip_hapus_satu_parameter", async () => {
+    await renderSemua();
+    const chip = screen.getByRole("list", { name: "Filter aktif" });
+    const href = (nama: string) =>
+      within(chip)
+        .getByRole("link", { name: `Hapus filter ${nama}` })
+        .getAttribute("href");
+    expect(href("Kata kunci: sejarah")).toBe(URL_SEMUA.replace("q=sejarah&", ""));
+    expect(href("Kategori: Kategori B")).toBe(URL_SEMUA.replace("kategori_id=2&", ""));
+    expect(href("Tersedia sekarang")).toBe(URL_SEMUA.replace("tersedia=true&", ""));
+    expect(href("Tahun dari: 2000")).toBe(URL_SEMUA.replace("tahun_dari=2000&", ""));
+    expect(within(chip).getAllByRole("link")).toHaveLength(6);
+  });
+
+  it("OQ_44_chip_kategori_tidak_dikenal", async () => {
+    respons.set("/katalog/kategori", KATEGORI);
+    respons.set("/katalog/judul?kategori_id=99&halaman=1", halamanKatalog([]));
+    render(await Katalog(searchParams({ kategori_id: "99" })));
+    expect(
+      screen
+        .getByRole("link", { name: "Hapus filter Kategori tidak dikenal" })
+        .getAttribute("href"),
+    ).toBe("/katalog");
+  });
+
+  it("OQ_44_urutkan_ganti_ke_halaman_1", async () => {
+    await renderSemua();
+    const pilih = screen.getByRole("combobox", { name: "Urutkan" }) as HTMLSelectElement;
+    expect([...pilih.options].map((o) => o.textContent)).toEqual([
+      "Judul A–Z",
+      "Tahun terbit (terbaru)",
+      "Tahun terbit (terlama)",
+    ]);
+    expect(pilih.value).toBe("tahun_terbaru");
+    fireEvent.change(pilih, { target: { value: "tahun_terlama" } });
+    expect(dorong).toHaveBeenLastCalledWith(URL_SEMUA.replace("tahun_terbaru", "tahun_terlama"));
+    fireEvent.change(pilih, { target: { value: "judul_az" } });
+    expect(dorong).toHaveBeenLastCalledWith(URL_SEMUA.replace("&urut=tahun_terbaru", ""));
+  });
+
+  it("FR_KTL_04_OQ_44_paginasi_membawa_semua_parameter", async () => {
+    await renderSemua();
+    expect(screen.getByRole("link", { name: "Berikutnya" }).getAttribute("href")).toBe(
+      `${URL_SEMUA}&halaman=3`,
+    );
+    expect(screen.getByRole("link", { name: "Sebelumnya" }).getAttribute("href")).toBe(
+      `${URL_SEMUA}&halaman=1`,
+    );
+  });
+
+  it("FR_KTL_02_OQ_44_ditemukan_n_buku_untuk_kata_kunci_dan_filter", async () => {
+    await renderSemua(halamanKatalog([JUDUL], 1234, 2));
+    expect(screen.getByRole("heading", { level: 2, name: /^Ditemukan/ }).textContent).toBe(
+      "Ditemukan 1.234 buku untuk “sejarah, Kategori B, Kategori J, Tersedia sekarang, tahun 2000–2020”",
+    );
+  });
+
+  it("FR_KTL_02_ditemukan_n_buku_untuk_q_saja", async () => {
+    respons.set("/katalog/judul?q=sejarah&halaman=1", halamanKatalog([JUDUL], 32));
+    render(await Katalog(searchParams({ q: "sejarah" })));
+    expect(screen.getByRole("heading", { level: 2, name: /^Ditemukan/ }).textContent).toBe(
+      "Ditemukan 32 buku untuk “sejarah”",
+    );
+  });
+
+  it("OQ_44_judul_ditemukan_hanya_filter_tanpa_kata_kunci", async () => {
+    respons.set("/katalog/kategori", KATEGORI);
+    respons.set("/katalog/judul?kategori_id=2&halaman=1", halamanKatalog([JUDUL], 32));
+    render(await Katalog(searchParams({ kategori_id: "2" })));
+    expect(screen.getByRole("heading", { level: 2, name: /^Ditemukan/ }).textContent).toBe(
+      "Ditemukan 32 buku untuk “Kategori B”",
+    );
+  });
+
+  it("OQ_44_tanpa_kata_kunci_dan_filter_tanpa_judul_ditemukan", async () => {
+    respons.set("/katalog/judul?urut=tahun_terlama&halaman=1", halamanKatalog([JUDUL]));
+    render(await Katalog(searchParams({ urut: "tahun_terlama" })));
+    expect(screen.queryByRole("heading", { level: 2, name: /^Ditemukan/ })).toBeNull();
+  });
+
+  it("OQ_44_form_cari_katalog_membawa_filter_urutan_tanpa_halaman", async () => {
+    await renderSemua();
+    const form = screen.getByRole("search");
+    expect(form.getAttribute("action")).toBe("/katalog");
+    expect(namaIsian(form)).toEqual([
+      ["kategori_id", "2"],
+      ["kategori_id", "10"],
+      ["tersedia", "true"],
+      ["tahun_dari", "2000"],
+      ["tahun_sampai", "2020"],
+      ["urut", "tahun_terbaru"],
+    ]);
+    expect(form.querySelector("[name=halaman]")).toBeNull();
+    expect((within(form).getByRole("searchbox") as HTMLInputElement).value).toBe("sejarah");
+  });
+
+  it("OQ_44_form_cari_beranda_hanya_q", async () => {
+    respons.set("/katalog/judul?halaman=1&per_halaman=6", halamanKatalog([JUDUL]));
+    render(await Beranda());
+    const form = screen.getByRole("search");
+    expect([...form.querySelectorAll("[name]")].map((e) => e.getAttribute("name"))).toEqual(["q"]);
+  });
+
+  it("IR_UI_04_OQ_44_galat_422_tampil_apa_adanya_panel_tetap", async () => {
+    const pesan = "Rentang tahun tidak valid: tahun awal 2024 setelah tahun akhir 2020.";
+    respons.set("/katalog/kategori", KATEGORI);
+    respons.set(
+      "/katalog/judul?tahun_dari=2024&tahun_sampai=2020&halaman=1",
+      new GalatApi(422, "KTL_RENTANG_TAHUN_TIDAK_VALID", pesan, "OQ-44", {}, false),
+    );
+    const { container } = render(
+      await Katalog(searchParams({ tahun_dari: "2024", tahun_sampai: "2020" })),
+    );
+    expect(screen.getByRole("alert").textContent).toContain(pesan);
+    expect(screen.getByRole("form", { name: "Filter Pencarian" })).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Filter aktif" })).toBeTruthy();
+    expect(container.querySelector("article")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Navigasi halaman" })).toBeNull();
+  });
+
+  it("OQ_44_galat_non_422_diteruskan_ke_error_tsx", async () => {
+    const galat = new GalatApi(500, "SISTEM", "x", null, {}, true);
+    respons.set("/katalog/judul?tersedia=true&halaman=1", galat);
+    await expect(Katalog(searchParams({ tersedia: "true" }))).rejects.toBe(galat);
+  });
+
+  it("OQ_44_state_kosong_dengan_filter", async () => {
+    respons.set("/katalog/kategori", KATEGORI);
+    respons.set("/katalog/judul?q=zzz&tersedia=true&halaman=1", halamanKatalog([]));
+    const { container } = render(await Katalog(searchParams({ q: "zzz", tersedia: "true" })));
+    expect(screen.getByText("Tidak ada buku yang cocok dengan filter")).toBeTruthy();
+    const reset = screen.getAllByRole("link", { name: "Reset Semua" });
+    expect(reset.every((r) => r.getAttribute("href") === "/katalog?q=zzz")).toBe(true);
+    expect(reset.length).toBe(2); // panel + state kosong
+    expect(container.querySelector("article")).toBeNull();
+  });
+
+  it("OQ_44_tombol_filter_mobile_aria_expanded", async () => {
+    await renderSemua();
+    const tombol = screen.getByRole("button", { name: "Filter" });
+    const panel = document.getElementById(tombol.getAttribute("aria-controls")!)!;
+    expect(tombol.getAttribute("aria-expanded")).toBe("false");
+    expect(panel.className).toMatch(/(^|\s)hidden(\s|$)/);
+    expect(panel.className).toContain("lg:block");
+    fireEvent.click(tombol);
+    expect(tombol.getAttribute("aria-expanded")).toBe("true");
+    expect(panel.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+  });
+
+  it("FR_KTL_01_OQ_44_kartu_vertikal_cover_di_atas", async () => {
+    await renderSemua();
+    const kartu = screen.getByRole("article");
+    expect(kartu.className).toContain("flex-col");
+    expect(within(kartu).getByText("2 dari 5 eksemplar tersedia")).toBeTruthy();
+  });
+});
+
 describe("Beranda / (FR-KTL-05, OQ-43)", () => {
-  it("OQ_43_tautan_kategori_ke_katalog_q_nama_ter_encode", async () => {
+  it("OQ_43_OQ_44_beranda_tautan_kategori_ke_katalog_kategori_id", async () => {
     respons.set("/katalog/kategori", [
       { id: 1, nama: "Fiksi" },
       { id: 2, nama: "Sains & Teknologi" },
@@ -215,11 +496,11 @@ describe("Beranda / (FR-KTL-05, OQ-43)", () => {
       within(bagian)
         .getByRole("link", { name: /Sains & Teknologi/ })
         .getAttribute("href"),
-    ).toBe("/katalog?q=Sains+%26+Teknologi");
+    ).toBe("/katalog?kategori_id=2");
     expect(within(bagian).getByRole("link", { name: /Fiksi/ }).getAttribute("href")).toBe(
-      "/katalog?q=Fiksi",
+      "/katalog?kategori_id=1",
     );
-    // OQ-43 (perubahan 2026-10-06): judul "Kategori Populer" hanya label; tautan tetap /katalog?q=<nama>.
+    // OQ-43 (perubahan 2026-10-06): judul "Kategori Populer" hanya label. OQ-44: tautan → kategori_id (hasil tepat).
     expect(screen.getByRole("heading", { level: 2, name: "Kategori Populer" })).toBeTruthy();
   });
 

@@ -46,7 +46,7 @@ export default async function Beranda() {
       <section className="relative overflow-hidden border-b border-line">
         <div className={`${KONTAINER} py-12 sm:py-16 lg:py-20`}>
           <div className="relative z-10 flex flex-col gap-5 lg:w-1/2 lg:pr-12">
-            <h1 className="font-display text-4xl leading-tight sm:text-5xl 2xl:text-6xl">
+            <h1 className="font-display text-4xl leading-tight sm:text-5xl lg:font-semibold 2xl:text-6xl">
               Temukan Buku, <span className="block">Jelajahi Pengetahuan</span>
             </h1>
             <p className="text-navy/80 sm:text-lg">
@@ -67,7 +67,10 @@ export default async function Beranda() {
         className={`${KONTAINER} grid gap-6 py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)] lg:items-start`}
       >
         <div className="flex flex-col gap-1 lg:pt-4">
-          <h2 id="judul-kategori" className="font-display text-2xl sm:text-3xl lg:text-4xl">
+          <h2
+            id="judul-kategori"
+            className="font-display text-2xl sm:text-3xl lg:text-4xl lg:font-semibold"
+          >
             Kategori Populer
           </h2>
           <p className="text-sm text-navy/80">Jelajahi koleksi berdasarkan kategori.</p>
@@ -79,7 +82,7 @@ export default async function Beranda() {
             {kategori.map((k) => (
               <li key={k.id}>
                 <Link
-                  href={tautanKategori(k.nama)}
+                  href={tautanKategori(k.id)}
                   className="group flex h-full items-center gap-3 rounded-xl border border-line bg-surface p-4 hover:border-gold"
                 >
                   <span className="flex min-w-0 flex-1 flex-col gap-2">
@@ -102,7 +105,10 @@ export default async function Beranda() {
       <section aria-labelledby="judul-koleksi" className={`${KONTAINER} pb-12`}>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h2 id="judul-koleksi" className="font-display text-2xl sm:text-3xl lg:text-4xl">
+            <h2
+              id="judul-koleksi"
+              className="font-display text-2xl sm:text-3xl lg:text-4xl lg:font-semibold"
+            >
               Koleksi Buku
             </h2>
             <p className="text-sm text-navy/80">
@@ -131,7 +137,10 @@ export default async function Beranda() {
         className={`${KONTAINER} grid gap-8 pb-14 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.4fr)] lg:items-center`}
       >
         <section aria-labelledby="judul-tentang" className="flex flex-col gap-3">
-          <h2 id="judul-tentang" className="font-display text-2xl sm:text-3xl lg:text-4xl">
+          <h2
+            id="judul-tentang"
+            className="font-display text-2xl sm:text-3xl lg:text-4xl lg:font-semibold"
+          >
             Tentang Perpustakaan Naratif
           </h2>
           {profil && <p className="text-sm leading-relaxed text-navy/80">{profil}</p>}
@@ -161,7 +170,10 @@ export default async function Beranda() {
             <p className="text-xs font-semibold tracking-[0.2em] text-gold uppercase">
               Jadi Bagian dari Naratif
             </p>
-            <h2 id="judul-cta" className="font-display text-2xl sm:text-3xl lg:text-4xl">
+            <h2
+              id="judul-cta"
+              className="font-display text-2xl sm:text-3xl lg:text-4xl lg:font-semibold"
+            >
               Daftar Sekarang, Mulai Perjalanan Membaca Anda
             </h2>
             <p className="text-sm text-ivory/85">
