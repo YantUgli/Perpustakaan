@@ -64,6 +64,7 @@ const AULIA = {
   telepon: "0812000111",
   nik: "3171000000000001",
   tanggal_daftar: "2026-09-30",
+  ada_foto: false,
 };
 const BUDI = { ...AULIA, kode: "AGT-000002", nama: "Budi Santoso", nik: "3171000000000002" };
 
@@ -152,6 +153,31 @@ describe("Detail anggota (FR-AKN-10, OQ-33)", () => {
     );
     expect(container.textContent).not.toMatch(/layak|pinjaman aktif|diblokir/i);
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("OQ_42_detail_admin_ada_foto_true_img_dari_endpoint_admin", async () => {
+    respons.set("/admin/anggota/AGT-000001", { ...AULIA, ada_foto: true });
+    render(await DetailAnggota({ params: Promise.resolve({ kode: "AGT-000001" }) }));
+    const img = screen.getByRole("img", { name: "Foto Aulia Rahma" });
+    expect(img.getAttribute("src")).toBe("/api/v1/admin/anggota/AGT-000001/foto");
+  });
+
+  it("OQ_42_detail_admin_kode_foto_dari_respons_api_bukan_url", async () => {
+    // Kode di URL boleh berbeda bentuk (huruf kecil); path foto memakai kode dari respons API.
+    respons.set("/admin/anggota/agt-000001", { ...AULIA, ada_foto: true });
+    render(await DetailAnggota({ params: Promise.resolve({ kode: "agt-000001" }) }));
+    const img = screen.getByRole("img", { name: "Foto Aulia Rahma" });
+    expect(img.getAttribute("src")).toBe("/api/v1/admin/anggota/AGT-000001/foto");
+  });
+
+  it("OQ_42_detail_admin_ada_foto_false_inisial_tanpa_img_foto", async () => {
+    respons.set("/admin/anggota/AGT-000001", AULIA);
+    const { container } = render(
+      await DetailAnggota({ params: Promise.resolve({ kode: "AGT-000001" }) }),
+    );
+    expect(screen.getByRole("img", { name: "Aulia Rahma" }).textContent).toBe("AR");
+    // Bukti tanpa request foto: peramban hanya memuat foto bila ada <img> berisi path foto.
+    expect(container.querySelector('img[src*="/foto"]')).toBeNull();
   });
 
   it("detail_kode_tak_ada_404", async () => {

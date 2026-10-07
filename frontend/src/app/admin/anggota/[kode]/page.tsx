@@ -13,6 +13,7 @@ export const metadata: Metadata = { title: "Detail Anggota" };
 /**
  * FR-AKN-10: detail anggota. NIK tampil di sini (dan di halaman ubah) saja, sebagai teks (K-05).
  * Kelayakan & pinjaman aktif sengaja tidak ada: itu milik alur peminjaman (FR-PJM-02, WP 5.4.6).
+ * Foto dari `GET /admin/anggota/{kode}/foto` hanya bila `ada_foto` (OQ-42); kode dari respons API.
  */
 export default async function DetailAnggota({ params }: { params: Promise<{ kode: string }> }) {
   const a = await ambilAnggota((await params).kode);
@@ -22,7 +23,11 @@ export default async function DetailAnggota({ params }: { params: Promise<{ kode
         ← Kembali ke daftar anggota
       </Link>
       <header className="flex flex-wrap items-center gap-4">
-        <Avatar nama={a.nama} ukuran="besar" />
+        <Avatar
+          nama={a.nama}
+          src={a.ada_foto ? `/api/v1/admin/anggota/${encodeURIComponent(a.kode)}/foto` : null}
+          ukuran="besar"
+        />
         <div className="flex flex-col gap-1">
           <h1 className="font-display text-3xl sm:text-4xl">{a.nama}</h1>
           <p className="angka text-navy/80">{a.kode}</p>

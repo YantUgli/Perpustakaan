@@ -238,17 +238,20 @@ describe("Tagihan (FR-AGT-04, OQ-36)", () => {
   });
 });
 
+const PROFIL_AULIA = {
+  kode: "AGT-000123",
+  nama: "Aulia Rahma",
+  alamat: "Jl. Melati 12",
+  email: "aulia@contoh.example",
+  telepon: "0812",
+  nik: "3171012345678901",
+  tanggal_daftar: "2026-01-12",
+  ada_foto: false,
+};
+
 describe("Profil (FR-AKN-07, K-05)", () => {
   it("K_05_nik_foto_tidak_bisa_diubah (NIK tampil utuh, bukan isian)", async () => {
-    respons.set("/anggota/profil", {
-      kode: "AGT-000123",
-      nama: "Aulia Rahma",
-      alamat: "Jl. Melati 12",
-      email: "aulia@contoh.example",
-      telepon: "0812",
-      nik: "3171012345678901",
-      tanggal_daftar: "2026-01-12",
-    });
+    respons.set("/anggota/profil", PROFIL_AULIA);
     render(await HalamanProfil());
     expect(screen.getByText("3171012345678901")).toBeTruthy(); // P3: tidak disamarkan
     expect(screen.queryByLabelText(/NIK/)).toBeNull();
@@ -257,16 +260,24 @@ describe("Profil (FR-AKN-07, K-05)", () => {
     expect(screen.getByRole("img", { name: "Aulia Rahma" }).textContent).toBe("AR"); // OQ-42
   });
 
+  it("OQ_42_profil_ada_foto_true_img_dari_endpoint_sendiri", async () => {
+    respons.set("/anggota/profil", { ...PROFIL_AULIA, ada_foto: true });
+    render(await HalamanProfil());
+    const img = screen.getByRole("img", { name: "Foto Aulia Rahma" });
+    expect(img.getAttribute("src")).toBe("/api/v1/anggota/profil/foto");
+  });
+
+  it("OQ_42_profil_ada_foto_false_inisial_tanpa_img_foto", async () => {
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    const { container } = render(await HalamanProfil());
+    expect(screen.getByRole("img", { name: "Aulia Rahma" }).textContent).toBe("AR");
+    // Bukti tanpa request foto: peramban hanya memuat foto bila ada <img> berisi path foto.
+    expect(container.querySelector('img[src*="/foto"]')).toBeNull();
+    expect(dipanggil).toEqual(["/anggota/profil"]);
+  });
+
   it("FR_AKN_07_09_profil_memuat_dua_form_terpisah (data diri & ubah password, tombol masing-masing)", async () => {
-    respons.set("/anggota/profil", {
-      kode: "AGT-000123",
-      nama: "Aulia Rahma",
-      alamat: "Jl. Melati 12",
-      email: "aulia@contoh.example",
-      telepon: "0812",
-      nik: "3171012345678901",
-      tanggal_daftar: "2026-01-12",
-    });
+    respons.set("/anggota/profil", PROFIL_AULIA);
     render(await HalamanProfil());
     expect(screen.getByRole("heading", { name: "Data Diri" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Ubah Password" })).toBeTruthy();
