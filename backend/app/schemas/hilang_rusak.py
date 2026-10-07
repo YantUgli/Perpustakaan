@@ -21,6 +21,8 @@ class ItemAktifKeluar(BaseModel):
     tanggal_pinjam: date
     jatuh_tempo: date
     hari_terlambat: int  # informasi saja; tidak ada aturan yang bergantung padanya
+    # FR-HLR-04: informasi; nominal final dibentuk saat dicatat. Sengaja tanpa `harga_judul`.
+    nominal_penggantian: int
 
 
 class DaftarItemKeluar(BaseModel):
