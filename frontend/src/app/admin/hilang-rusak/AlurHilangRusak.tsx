@@ -383,7 +383,7 @@ export function AlurHilangRusak() {
         </form>
       )}
 
-      {/* Modal konfirmasi sebelum POST (butir 6) — tanpa nominal */}
+      {/* Modal konfirmasi sebelum POST (butir 6) */}
       <Modal
         terbuka={modal}
         judul="Konfirmasi Pencatatan"
@@ -416,6 +416,16 @@ export function AlurHilangRusak() {
               </>
             )}
           </dl>
+        )}
+        {itemDipilih && (
+          // FR-HLR-04: nominal dari API apa adanya; nominal final dari tagihan.nominal setelah POST
+          <p className="mt-3 text-sm">
+            Tagihan penggantian:{" "}
+            <span className="angka font-semibold">
+              {formatRupiah(itemDipilih.nominal_penggantian)}
+            </span>
+            <span className="ml-1 text-navy/60 text-xs">(nominal final dihitung saat dicatat)</span>
+          </p>
         )}
       </Modal>
     </section>

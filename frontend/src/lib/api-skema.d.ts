@@ -1182,6 +1182,8 @@ export interface components {
       jatuh_tempo: string;
       /** Hari Terlambat */
       hari_terlambat: number;
+      /** Nominal Penggantian */
+      nominal_penggantian: number;
     };
     /** ItemDipinjamKeluar */
     ItemDipinjamKeluar: {
