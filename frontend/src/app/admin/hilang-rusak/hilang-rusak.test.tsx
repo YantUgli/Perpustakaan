@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GalatApi, PESAN_SISTEM } from "@/lib/galat";
@@ -60,6 +60,8 @@ const ITEM_1 = {
   tanggal_pinjam: "2026-09-01",
   jatuh_tempo: "2026-10-01",
   hari_terlambat: 5,
+  // Sengaja ≠ PENCATATAN.tagihan.nominal (150.000): nominal sukses harus dari respons POST.
+  nominal_penggantian: 145000,
 };
 
 const ITEM_2 = {
@@ -69,6 +71,7 @@ const ITEM_2 = {
   tanggal_pinjam: "2026-09-10",
   jatuh_tempo: "2026-10-10",
   hari_terlambat: 0,
+  nominal_penggantian: 89000,
 };
 
 const DAFTAR_PENUH = {
@@ -276,8 +279,8 @@ describe("AlurHilangRusak (FR-HLR)", () => {
 
     // Modal terbuka (butir 6)
     await waitFor(() => expect(screen.getByText("Konfirmasi Pencatatan")).toBeTruthy());
-    // Modal tidak menampilkan nominal (harga tidak ada di ItemAktifKeluar)
-    expect(screen.queryByText(/Rp/)).toBeNull();
+    // F6 dibalik (Ayen, 2026-10-07): modal menampilkan nominal_penggantian item terpilih
+    expect(screen.getByText("Rp145.000")).toBeTruthy();
 
     // Klik Batal → modal tutup → catatHilangRusak TIDAK dipanggil
     fireEvent.click(screen.getByRole("button", { name: "Batal" }));
@@ -325,6 +328,38 @@ describe("AlurHilangRusak (FR-HLR)", () => {
       "2026-10-06",
       "Dilaporkan hilang oleh anggota",
     );
+  });
+
+  it("test_FR_HLR_04_modal_menampilkan_nominal_penggantian_dari_api", async () => {
+    // F6 dibalik (Ayen, 2026-10-07): nominal = ItemAktifKeluar.nominal_penggantian apa adanya
+    mockDaftarItemAnggota.mockResolvedValueOnce(DAFTAR_PENUH);
+    render(<AlurHilangRusak />);
+    await act(async () => pemindai.onHasil("AGT-000001"));
+    await waitFor(() => screen.getByText("Laut Bercerita"));
+    fireEvent.click(screen.getByText("Laut Bercerita"));
+    await waitFor(() => screen.getByRole("button", { name: "Catat Hilang/Rusak" }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "Rusak" }));
+    fireEvent.change(screen.getByLabelText(/Tanggal kejadian/), {
+      target: { value: "2026-10-06" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Keterangan/), {
+      target: { value: "Sampul sobek" },
+    });
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Catat Hilang/Rusak" })),
+    );
+    await waitFor(() => screen.getByText("Konfirmasi Pencatatan"));
+
+    const modal = screen.getByText("Konfirmasi Pencatatan").closest("dialog") as HTMLElement;
+    expect(modal).toBeTruthy();
+    expect(within(modal).getByText(/Tagihan penggantian/)).toBeTruthy();
+    expect(within(modal).getByText("Rp89.000")).toBeTruthy();
+    expect(within(modal).getByText("(nominal final dihitung saat dicatat)")).toBeTruthy();
+    // Nominal item lain tidak ikut tampil
+    expect(within(modal).queryByText("Rp145.000")).toBeNull();
+    // Belum ada POST: nominal di modal bukan dari respons pencatatan
+    expect(mockCatatHilangRusak).not.toHaveBeenCalled();
   });
 
   it("test_FR_HLR_03_label_jenis_dari_labelStatus", async () => {
