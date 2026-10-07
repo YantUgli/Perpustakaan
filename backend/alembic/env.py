@@ -8,6 +8,7 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 from app.core.config import get_settings
 from app.models import Base
+from app.models.base import sertakan_objek_alembic
 
 config = context.config
 
@@ -27,6 +28,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=sertakan_objek_alembic,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -39,7 +41,12 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            include_object=sertakan_objek_alembic,
+        )
         with context.begin_transaction():
             context.run_migrations()
 

@@ -5,9 +5,15 @@ description = "Backend FastAPI Sistem Informasi Perpustakaan"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.20.0",
-    "fastapi>=0.142.2",
+    "argon2-cffi>=25.1.0",
+    "email-validator>=2.3.0",
+    "fastapi[standard]>=0.142.2",
+    "openpyxl>=3.1.5",
+    "pillow>=12.3.0",
     "psycopg[binary]>=3",
     "pydantic-settings>=2.15.0",
+    "python-multipart>=0.0.32",
+    "reportlab>=5.0.1",
     "sqlalchemy>=2",
     "tzdata>=2026.4",
     "uvicorn[standard]>=0.54.0",
@@ -16,6 +22,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx2>=2.13.1",
+    "pypdf>=6.19.0",
     "pytest>=9.1.1",
     "ruff>=0.16.10",
 ]
@@ -33,7 +40,15 @@ ignore = ["N802", "N818"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106"]
 "alembic/**" = ["N999"]
+# String SQL hasil autogenerate (CHECK panjang) dibiarkan utuh agar mudah dicocokkan dengan model.
+"alembic/versions/**" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+# Durasi setiap fase test >= 1 dtk selalu tercatat di log (termasuk CI), walau test lulus.
+addopts = "-ra --durations=0 --durations-min=1.0"
+# pytest mengatur ulang filter warning per test; samakan dengan filter produksi di app/services/berkas.py
+filterwarnings = ["error::PIL.Image.DecompressionBombWarning"]
+
+[tool.fastapi]
+entrypoint = "app.main:app"
