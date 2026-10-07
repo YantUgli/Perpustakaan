@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { FormCari } from "@/components/katalog/FormCari";
 import { ikonKategori } from "@/components/katalog/ikon-kategori";
 import { KartuBukuRingkas } from "@/components/katalog/KartuBukuRingkas";
@@ -30,7 +31,7 @@ const kelasTautanTeks =
 
 /**
  * FR-KTL-05, BR-01, IR-UI-05: beranda tanpa login, tata letak hal-02. Hero dua kolom (judul "Temukan Buku,
- * Jelajahi Pengetahuan" + subjudul fungsional + kolom cari; panel kanan dekoratif CSS, tanpa foto). Kategori dari
+ * Jelajahi Pengetahuan" + subjudul fungsional + kolom cari; panel kanan foto dekoratif, `PanelHero`). Kategori dari
  * `GET /katalog/kategori` (OQ-43; judul "Kategori Populer" hanya label, isi tetap semua kategori A–Z; ikon dari
  * kata kunci nama, cadangan ikon buku), cuplikan koleksi dari `GET /katalog/judul` dengan kartu
  * ringkas. Ringkasan Tentang memakai paragraf Profil dari `lib/info-perpustakaan`; CTA daftar berdasar BR-03.
@@ -60,7 +61,7 @@ export default async function Beranda() {
             </Link>
           </div>
         </div>
-        <PanelHero />
+        <PanelHero foto={fotoHeroBeranda} />
       </section>
 
       <section
