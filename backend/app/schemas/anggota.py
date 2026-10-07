@@ -12,7 +12,10 @@ class _TanpaIsianAsing(BaseModel):
 
 
 class ProfilKeluar(BaseModel):
-    """FR-AKN-07/10. Sengaja tanpa `password_hash` dan `foto_path` (foto tidak disajikan)."""
+    """FR-AKN-07/10. Sengaja tanpa `password_hash` dan `foto_path`.
+
+    Foto disajikan lewat endpoint terpisah khusus pemilik & admin (OQ-42); di sini hanya penanda
+    `ada_foto`."""
 
     kode: str
     nama: str
@@ -21,6 +24,7 @@ class ProfilKeluar(BaseModel):
     telepon: str
     nik: str
     tanggal_daftar: date
+    ada_foto: bool  # OQ-42
 
     @classmethod
     def dari(cls, p: ProfilAnggota) -> "ProfilKeluar":

@@ -1,12 +1,14 @@
-"""Router admin: data anggota (FR-AKN-10/11, K-03). Didaftarkan ke `router_admin` (NFR-SEC-03).
+"""Router admin: data anggota (FR-AKN-10/11, K-03) dan foto anggota (OQ-42). Didaftarkan ke
+`router_admin` (NFR-SEC-03).
 
-Sengaja TIDAK ada: tambah anggota oleh admin, nonaktifkan/hapus anggota (domain-rules §13),
-ubah NIK/foto (K-05).
+Foto hanya dibaca (GET). Sengaja TIDAK ada: tambah anggota oleh admin, nonaktifkan/hapus anggota
+(domain-rules §13), ubah NIK/foto (K-05).
 """
 
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -37,6 +39,21 @@ def cari(
 @router.get("/{kode}", response_model=ProfilKeluar)
 def detail(kode: str, db: DB):
     return ProfilKeluar.dari(layanan.detail(db, kode))
+
+
+@router.get(
+    "/{kode}/foto",
+    response_class=FileResponse,
+    responses={200: {"content": {"image/jpeg": {}, "image/png": {}}}},
+)
+def foto(kode: str, db: DB) -> FileResponse:
+    """ASUMSI(OQ-42): foto anggota untuk admin; tanpa foto/berkas hilang → 404."""
+    berkas = layanan.foto_anggota(db, kode)
+    return FileResponse(
+        berkas.path,
+        media_type=berkas.media_type,
+        headers={"Cache-Control": layanan.CACHE_CONTROL_FOTO},
+    )
 
 
 @router.put("/{kode}", response_model=ProfilKeluar)

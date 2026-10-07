@@ -97,6 +97,7 @@ def test_FR_AKN_10_hasil_memuat_data_tanpa_rahasia(klien_admin, db: Session):
         "telepon": x.telepon,
         "nik": x.nik,
         "tanggal_daftar": x.tanggal_daftar.isoformat(),
+        "ada_foto": False,  # OQ-42: penanda saja
     }  # tanpa password_hash / foto_path
 
 
