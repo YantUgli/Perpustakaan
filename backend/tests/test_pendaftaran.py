@@ -297,10 +297,21 @@ def test_NFR_SEC_06_foto_sah_tidak_disimpan_bila_isian_lain_salah_atau_duplikat(
     assert _berkas(penyimpanan_sementara) == []
 
 
-def test_NFR_SEC_06_foto_anggota_tidak_disajikan_lewat_route_mana_pun():
-    from tests.test_autentikasi import _route_aplikasi_sungguhan
+def test_NFR_SEC_06_OQ_42_foto_anggota_hanya_lewat_route_pemilik_dan_admin():
+    """Sebelum OQ-42 foto tidak disajikan; kini hanya untuk pemilik & admin, tidak publik."""
+    from tests.test_autentikasi import ROUTE_PUBLIK, _route_aplikasi_sungguhan
 
-    assert [r.path for r in _route_aplikasi_sungguhan() if "foto" in r.path.lower()] == []
+    route_foto = {
+        (m, r.path)
+        for r in _route_aplikasi_sungguhan()
+        for m in r.methods
+        if "foto" in r.path.lower()
+    }
+    assert route_foto == {
+        ("GET", "/api/v1/anggota/profil/foto"),  # router_anggota, identitas dari sesi
+        ("GET", "/api/v1/admin/anggota/{kode}/foto"),  # router_admin
+    }
+    assert not route_foto & ROUTE_PUBLIK
 
 
 # --------------------------------------------------------------------------- keandalan

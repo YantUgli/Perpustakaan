@@ -75,6 +75,7 @@ def test_FR_AKN_07_lihat_profil_sendiri(client, saya):
         "telepon": saya.telepon,
         "nik": saya.nik,  # data sendiri, hanya informasi
         "tanggal_daftar": saya.tanggal_daftar.isoformat(),
+        "ada_foto": False,  # OQ-42: penanda saja
     }  # tanpa password_hash / foto_path
 
 

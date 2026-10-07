@@ -1,12 +1,15 @@
-"""Router area anggota: profil (FR-AKN-07..09). Didaftarkan ke `router_anggota` (NFR-SEC-03).
+"""Router area anggota: profil (FR-AKN-07..09) dan foto sendiri (OQ-42). Didaftarkan ke
+`router_anggota` (NFR-SEC-03).
 
 Identitas anggota selalu dari sesi; tidak ada parameter path/body berisi id atau kode anggota.
-Sengaja TIDAK ada: ubah NIK/foto (K-05), unggah ulang foto, lupa password mandiri (K-03).
+Foto hanya dibaca (GET); sengaja TIDAK ada: ubah NIK/foto (K-05), unggah ulang foto, lupa password
+mandiri (K-03).
 """
 
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, Response
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import butuh_anggota
@@ -23,6 +26,21 @@ Anggota = Annotated[Pengguna, Depends(butuh_anggota)]
 @router.get("", response_model=ProfilKeluar)
 def profil(db: DB, saya: Anggota):
     return ProfilKeluar.dari(layanan.profil(db, saya.id))
+
+
+@router.get(
+    "/foto",
+    response_class=FileResponse,
+    responses={200: {"content": {"image/jpeg": {}, "image/png": {}}}},
+)
+def foto(db: DB, saya: Anggota) -> FileResponse:
+    """ASUMSI(OQ-42): foto milik anggota yang login; tanpa foto/berkas hilang → 404."""
+    berkas = layanan.foto_sendiri(db, saya.id)
+    return FileResponse(
+        berkas.path,
+        media_type=berkas.media_type,
+        headers={"Cache-Control": layanan.CACHE_CONTROL_FOTO},
+    )
 
 
 @router.put("", response_model=ProfilKeluar)

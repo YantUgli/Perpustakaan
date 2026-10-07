@@ -1,6 +1,8 @@
 """Profil anggota & pengelolaan anggota oleh admin: FR-AKN-07..11, K-03, K-05, K-06, OQ-32, OQ-33.
 
 NIK dan foto tidak pernah diubah di sini (K-05; isian asing ditolak schema `extra="forbid"`).
+Foto hanya dibaca untuk pemiliknya dan admin (OQ-42), lewat `berkas.berkas_tersimpan()` yang sama
+dengan cover publik: path hanya dari DB, wajib di dalam `STORAGE_DIR`, Content-Type dari ekstensi.
 Email diperiksa dengan helper yang sama dengan pendaftaran: lintas admin–anggota, tak peka huruf,
 pesan tidak membedakan admin/anggota (OQ-02, OQ-09). Password tidak di-trim dan tidak pernah
 keluar dari fungsi ini selain sebagai hash argon2id (NFR-SEC-01).
@@ -22,7 +24,7 @@ from app.core.validasi import (
     password_cukup_panjang,
 )
 from app.models import Anggota
-from app.services import autentikasi, pendaftaran
+from app.services import autentikasi, berkas, pendaftaran
 
 _LABEL = pendaftaran.LABEL_ISIAN | {
     "password_lama": "Password lama",
@@ -30,6 +32,8 @@ _LABEL = pendaftaran.LABEL_ISIAN | {
 }
 _CONSTRAINT_EMAIL = "uq_anggota_email_lower"
 _PESAN_PASSWORD_LAMA = {"kosong": "Password lama wajib diisi.", "salah": "Password lama salah."}
+# OQ-42 (keputusan Ayen 2026-10-07): foto = data pribadi; tidak disimpan cache bersama/perangkat.
+CACHE_CONTROL_FOTO = "private, no-store"
 
 
 @dataclass(frozen=True)
@@ -41,6 +45,7 @@ class ProfilAnggota:
     telepon: str
     nik: str
     tanggal_daftar: date
+    ada_foto: bool  # OQ-42: berkas foto benar-benar dapat disajikan
 
 
 # --------------------------------------------------------------------------------------- galat
@@ -89,7 +94,21 @@ def _profil(a: Anggota) -> ProfilAnggota:
         telepon=a.telepon,
         nik=a.nik,
         tanggal_daftar=a.tanggal_daftar,
+        ada_foto=berkas.berkas_tersimpan(a.foto_path) is not None,
     )
+
+
+def _foto(a: Anggota) -> berkas.BerkasTersimpan:
+    """ASUMSI(OQ-42): tanpa foto, berkas hilang, atau path di luar `STORAGE_DIR` → 404."""
+    tersimpan = berkas.berkas_tersimpan(a.foto_path)
+    if tersimpan is None:
+        raise GalatBisnis(
+            kode="AKN_FOTO_TIDAK_ADA",
+            pesan="Foto anggota tidak tersedia.",
+            rujukan="OQ-42",
+            status_code=404,
+        )
+    return tersimpan
 
 
 def _per_kode(db: Session, kode: str, rujukan: str) -> Anggota:
@@ -265,6 +284,16 @@ def cari(
 
 def detail(db: Session, kode: str) -> ProfilAnggota:
     return _profil(_per_kode(db, kode, "FR-AKN-10"))
+
+
+def foto_sendiri(db: Session, anggota_id: int) -> berkas.BerkasTersimpan:
+    """ASUMSI(OQ-42): foto milik anggota yang login (`anggota_id` selalu dari sesi, NFR-SEC-03)."""
+    return _foto(db.get(Anggota, anggota_id))
+
+
+def foto_anggota(db: Session, kode: str) -> berkas.BerkasTersimpan:
+    """ASUMSI(OQ-42): foto anggota untuk admin; kode dinormalisasi seperti `detail`."""
+    return _foto(_per_kode(db, kode, "FR-AKN-10"))
 
 
 def ubah_oleh_admin(
