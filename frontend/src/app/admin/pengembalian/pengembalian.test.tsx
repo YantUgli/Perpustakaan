@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GalatApi } from "@/lib/galat";
+import { GalatApi, PESAN_SISTEM } from "@/lib/galat";
 
 // Butir 7: hapus parameter tak terpakai di mock
 const pemindai: { onHasil: (t: string) => void; label: string; nonaktif: boolean } = {
@@ -226,5 +226,27 @@ describe("AlurPengembalian (FR-KMB)", () => {
 
     await act(async () => resolveKonfirmasi!(HASIL_KEMBALI_DENDA));
     await waitFor(() => expect(screen.getByText("Dikembalikan")).toBeTruthy());
+  });
+});
+
+// Galat yang bukan GalatApi (mis. error JS tak terduga) → PESAN_SISTEM, sama dengan halaman lain.
+describe("AlurPengembalian galat non-API (IR-UI-04)", () => {
+  it("test_IR_UI_04_pratinjau_galat_non_api_tampil_pesan_sistem", async () => {
+    mockPratinjauKembali.mockRejectedValueOnce(new Error("tak terduga"));
+    render(<AlurPengembalian />);
+    await act(async () => pemindai.onHasil("EKS-000001"));
+    await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
+  });
+
+  it("test_IR_UI_04_konfirmasi_galat_non_api_tampil_pesan_sistem", async () => {
+    mockPratinjauKembali.mockResolvedValueOnce(PRATINJAU);
+    mockKonfirmasiKembali.mockRejectedValueOnce(new Error("tak terduga"));
+    render(<AlurPengembalian />);
+    await act(async () => pemindai.onHasil("EKS-000001"));
+    await waitFor(() => screen.getByText("Bumi Manusia"));
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Konfirmasi Pengembalian" })),
+    );
+    await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
   });
 });

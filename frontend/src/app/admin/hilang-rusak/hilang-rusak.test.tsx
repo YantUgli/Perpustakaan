@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GalatApi } from "@/lib/galat";
+import { GalatApi, PESAN_SISTEM } from "@/lib/galat";
 import { labelStatus } from "@/lib/label";
 
 // jsdom belum mengimplementasikan <dialog>.showModal/close
@@ -392,5 +392,56 @@ describe("AlurHilangRusak (FR-HLR)", () => {
     await act(async () => resolveDaftar!(DAFTAR_PENUH));
     await waitFor(() => expect(pemindai.nonaktif).toBe(false));
     expect(screen.getByText("Bumi Manusia")).toBeTruthy();
+  });
+});
+
+// Galat yang bukan GalatApi (mis. error JS tak terduga) → PESAN_SISTEM, sama dengan halaman lain.
+describe("AlurHilangRusak galat non-API (IR-UI-04)", () => {
+  it("test_IR_UI_04_daftar_item_anggota_galat_non_api_tampil_pesan_sistem", async () => {
+    mockDaftarItemAnggota.mockRejectedValueOnce(new Error("tak terduga"));
+    render(<AlurHilangRusak />);
+    await act(async () => pemindai.onHasil("AGT-000001"));
+    await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
+  });
+
+  it("test_IR_UI_04_jalur_b_pindai_buku_galat_non_api_tampil_pesan_sistem", async () => {
+    mockPratinjauKembali.mockRejectedValueOnce(new Error("tak terduga"));
+    render(<AlurHilangRusak />);
+    fireEvent.click(screen.getByRole("tab", { name: "Pindai Buku" }));
+    await act(async () => pemindai.onHasil("EKS-000001"));
+    await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
+  });
+
+  it("test_IR_UI_04_cari_anggota_galat_non_api_tampil_pesan_sistem", async () => {
+    mockCariAnggota.mockRejectedValueOnce(new Error("tak terduga"));
+    render(<AlurHilangRusak />);
+    fireEvent.change(screen.getByLabelText("Kata kunci pencarian anggota"), {
+      target: { value: "Siti" },
+    });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Cari" })));
+    await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
+  });
+
+  it("test_IR_UI_04_catat_galat_non_api_tampil_pesan_sistem", async () => {
+    mockDaftarItemAnggota.mockResolvedValueOnce(DAFTAR_PENUH);
+    mockCatatHilangRusak.mockRejectedValueOnce(new Error("tak terduga"));
+    render(<AlurHilangRusak />);
+    await act(async () => pemindai.onHasil("AGT-000001"));
+    await waitFor(() => screen.getByText("Bumi Manusia"));
+    fireEvent.click(screen.getByText("Bumi Manusia"));
+    await waitFor(() => screen.getByRole("button", { name: "Catat Hilang/Rusak" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Hilang" }));
+    fireEvent.change(screen.getByLabelText(/Tanggal kejadian/), {
+      target: { value: "2026-10-06" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Keterangan/), {
+      target: { value: "Dilaporkan hilang oleh anggota" },
+    });
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Catat Hilang/Rusak" })),
+    );
+    await waitFor(() => screen.getByText("Konfirmasi Pencatatan"));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Ya, Catat" })));
+    await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
   });
 });

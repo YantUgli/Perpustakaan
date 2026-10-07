@@ -8,7 +8,7 @@ import { KosongState } from "@/components/ui/KosongState";
 import { Pesan } from "@/components/ui/Pesan";
 import { Tombol } from "@/components/ui/Tombol";
 import { formatTanggal } from "@/lib/format";
-import { GalatApi } from "@/lib/galat";
+import { GalatApi, PESAN_SISTEM } from "@/lib/galat";
 import {
   type IdentitasAnggotaKeluar,
   type ItemValidKeluar,
@@ -62,7 +62,7 @@ export function AlurPeminjaman() {
         setTahap("buku");
       }
     } catch (e) {
-      setGalatScan(e instanceof GalatApi ? e.pesan : "Terjadi kesalahan. Coba lagi.");
+      setGalatScan(e instanceof GalatApi ? e.pesan : PESAN_SISTEM);
       setAnggota(null);
     } finally {
       setSedangProses(false);
@@ -80,7 +80,7 @@ export function AlurPeminjaman() {
         const item = await validasiItem(anggota.id, teks.trim(), kodes);
         setKeranjang((k) => [...k, item]);
       } catch (e) {
-        setGalatScan(e instanceof GalatApi ? e.pesan : "Terjadi kesalahan. Coba lagi.");
+        setGalatScan(e instanceof GalatApi ? e.pesan : PESAN_SISTEM);
       } finally {
         setSedangProses(false);
       }
@@ -97,7 +97,7 @@ export function AlurPeminjaman() {
       setHasilCari(data.data);
       setLebihBanyak(data.total > data.data.length);
     } catch (e) {
-      setGalatScan(e instanceof GalatApi ? e.pesan : "Terjadi kesalahan. Coba lagi.");
+      setGalatScan(e instanceof GalatApi ? e.pesan : PESAN_SISTEM);
       setHasilCari(null);
       setLebihBanyak(false);
     } finally {
@@ -117,7 +117,7 @@ export function AlurPeminjaman() {
       setTransaksi(t);
       setTahap("sukses");
     } catch (e) {
-      setGalatKonfirmasi(e instanceof GalatApi ? e.pesan : "Terjadi kesalahan. Coba lagi.");
+      setGalatKonfirmasi(e instanceof GalatApi ? e.pesan : PESAN_SISTEM);
     } finally {
       setSedangProses(false);
     }

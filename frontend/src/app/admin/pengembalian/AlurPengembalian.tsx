@@ -8,7 +8,7 @@ import { Kartu } from "@/components/ui/Kartu";
 import { Pesan } from "@/components/ui/Pesan";
 import { Tombol } from "@/components/ui/Tombol";
 import { formatRupiah, formatTanggal } from "@/lib/format";
-import { GalatApi } from "@/lib/galat";
+import { GalatApi, PESAN_SISTEM } from "@/lib/galat";
 import {
   type PengembalianKeluar,
   type PratinjauKeluar,
@@ -42,7 +42,7 @@ export function AlurPengembalian() {
       setPratinjau(data);
       setTahap("pratinjau");
     } catch (e) {
-      setGalatScan(e instanceof GalatApi ? e.pesan : "Terjadi kesalahan. Coba lagi.");
+      setGalatScan(e instanceof GalatApi ? e.pesan : PESAN_SISTEM);
     } finally {
       setSedangProses(false);
     }
@@ -56,7 +56,7 @@ export function AlurPengembalian() {
       setHasil(data);
       setTahap("sukses");
     } catch (e) {
-      setGalatScan(e instanceof GalatApi ? e.pesan : "Terjadi kesalahan. Coba lagi.");
+      setGalatScan(e instanceof GalatApi ? e.pesan : PESAN_SISTEM);
       setSedangProses(false);
     }
   }
