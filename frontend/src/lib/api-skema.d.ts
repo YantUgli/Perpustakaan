@@ -632,6 +632,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/admin/anggota/{kode}/foto": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Foto
+     * @description ASUMSI(OQ-42): foto anggota untuk admin; tanpa foto/berkas hilang → 404.
+     */
+    get: operations["foto_api_v1_admin_anggota__kode__foto_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/dashboard": {
     parameters: {
       query?: never;
@@ -746,6 +766,26 @@ export interface paths {
      * @description FR-AKN-07/08: nama, alamat, email (cek unik lintas admin–anggota), telepon.
      */
     put: operations["ubah_profil_api_v1_anggota_profil_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/anggota/profil/foto": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Foto
+     * @description ASUMSI(OQ-42): foto milik anggota yang login; tanpa foto/berkas hilang → 404.
+     */
+    get: operations["foto_api_v1_anggota_profil_foto_get"];
+    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -1492,7 +1532,10 @@ export interface components {
     };
     /**
      * ProfilKeluar
-     * @description FR-AKN-07/10. Sengaja tanpa `password_hash` dan `foto_path` (foto tidak disajikan).
+     * @description FR-AKN-07/10. Sengaja tanpa `password_hash` dan `foto_path`.
+     *
+     *     Foto disajikan lewat endpoint terpisah khusus pemilik & admin (OQ-42); di sini hanya penanda
+     *     `ada_foto`.
      */
     ProfilKeluar: {
       /** Kode */
@@ -1512,6 +1555,8 @@ export interface components {
        * Format: date
        */
       tanggal_daftar: string;
+      /** Ada Foto */
+      ada_foto: boolean;
     };
     /**
      * QrKeluar
@@ -3182,6 +3227,40 @@ export interface operations {
       };
     };
   };
+  foto_api_v1_admin_anggota__kode__foto_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        kode: string;
+      };
+      cookie?: {
+        sesi_perpus?: string | null;
+      };
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/jpeg": unknown;
+          "image/png": unknown;
+        };
+      };
+      /** @description Validasi isian gagal */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GalatRespons"];
+        };
+      };
+    };
+  };
   dashboard_api_v1_admin_dashboard_get: {
     parameters: {
       query?: never;
@@ -3420,6 +3499,38 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ProfilKeluar"];
+        };
+      };
+      /** @description Validasi isian gagal */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GalatRespons"];
+        };
+      };
+    };
+  };
+  foto_api_v1_anggota_profil_foto_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: {
+        sesi_perpus?: string | null;
+      };
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/jpeg": unknown;
+          "image/png": unknown;
         };
       };
       /** @description Validasi isian gagal */

@@ -27,6 +27,8 @@ const PROFIL = {
   telepon: "0812",
   nik: "3171012345678901",
   tanggal_daftar: "2026-01-12",
+  // OQ-42: sengaja true — body PUT tetap 4 isian; `ada_foto` tidak pernah dikirim (extra="forbid" → 422).
+  ada_foto: true,
 };
 
 const galat = (status: number, kode: string, pesan: string, isian: Record<string, string>) =>

@@ -60,6 +60,46 @@ describe("Avatar (OQ-42)", () => {
     const img = screen.getByRole("img", { name: "Foto Aulia Rahma" });
     expect(img.getAttribute("src")).toBe("/api/v1/anggota/profil/foto");
   });
+
+  it("OQ_42_avatar_src_null_tampil_inisial_tanpa_img", () => {
+    const { container } = render(<Avatar nama="Aulia Rahma" src={null} />);
+    expect(screen.getByRole("img", { name: "Aulia Rahma" }).textContent).toBe("AR");
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("OQ_42_avatar_foto_gagal_dimuat_kembali_ke_inisial", () => {
+    const { container } = render(<Avatar nama="Aulia Rahma" src="/api/v1/anggota/profil/foto" />);
+    fireEvent.error(screen.getByRole("img", { name: "Foto Aulia Rahma" }));
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByRole("img", { name: "Aulia Rahma" }).textContent).toBe("AR");
+  });
+
+  it("OQ_42_avatar_foto_sudah_gagal_sebelum_hydration_kembali_ke_inisial", () => {
+    // onError yang terjadi sebelum React terpasang tidak pernah sampai ke handler; gambar rusak
+    // dikenali dari complete=true dan naturalWidth=0 saat effect berjalan.
+    const complete = vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true);
+    const lebar = vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(0);
+    try {
+      const { container } = render(<Avatar nama="Aulia Rahma" src="/api/v1/anggota/profil/foto" />);
+      expect(container.querySelector("img")).toBeNull();
+      expect(screen.getByRole("img", { name: "Aulia Rahma" }).textContent).toBe("AR");
+    } finally {
+      complete.mockRestore();
+      lebar.mockRestore();
+    }
+  });
+
+  it("OQ_42_avatar_foto_sudah_termuat_sebelum_hydration_tetap_tampil", () => {
+    const complete = vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true);
+    const lebar = vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(96);
+    try {
+      render(<Avatar nama="Aulia Rahma" src="/api/v1/anggota/profil/foto" />);
+      expect(screen.getByRole("img", { name: "Foto Aulia Rahma" })).toBeTruthy();
+    } finally {
+      complete.mockRestore();
+      lebar.mockRestore();
+    }
+  });
 });
 
 describe("Isian & Pesan (IR-UI-04)", () => {

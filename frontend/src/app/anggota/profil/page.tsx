@@ -17,7 +17,8 @@ export const metadata: Metadata = { title: "Profil" };
  * FR-AKN-07/08 (data diri) dan FR-AKN-09 (ubah password) — dua form terpisah dengan tombol masing-masing,
  * sehingga ubah data diri tidak mensyaratkan password lama (keputusan pemilik proyek, decisions §B "Menu anggota").
  * ID, NIK, tanggal daftar, dan foto hanya ditampilkan (K-05). NIK tampil utuh karena halaman ini
- * hanya untuk pemiliknya (keputusan P3). Avatar inisial sampai endpoint foto tersedia (OQ-42).
+ * hanya untuk pemiliknya (keputusan P3). Foto dari `GET /anggota/profil/foto` hanya bila `ada_foto`;
+ * selain itu, atau bila gagal dimuat, avatar inisial (OQ-42).
  */
 export default async function HalamanProfil() {
   const profil = await ambilServer<Profil>("/anggota/profil");
@@ -30,7 +31,11 @@ export default async function HalamanProfil() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[18rem_1fr]">
         <Kartu className="flex flex-col items-center gap-4 text-center">
-          <Avatar nama={profil.nama} ukuran="besar" />
+          <Avatar
+            nama={profil.nama}
+            src={profil.ada_foto ? "/api/v1/anggota/profil/foto" : null}
+            ukuran="besar"
+          />
           <p className="font-display text-xl">{profil.nama}</p>
           <dl className="grid w-full grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-left text-sm">
             <dt className="text-navy/70">ID Anggota</dt>
