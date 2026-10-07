@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GalatApi } from "@/lib/galat";
+import { GalatApi, PESAN_SISTEM } from "@/lib/galat";
 
 // State Pemindai yang dapat diakses test; butir 7: hapus param tak terpakai
 const pemindai: { onHasil: (t: string) => void; label: string; nonaktif: boolean } = {
@@ -347,5 +347,50 @@ describe("AlurPeminjaman (FR-PJM)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Konfirmasi Peminjaman" })),
     );
     await waitFor(() => expect(screen.getByText(/Peminjaman berhasil/)).toBeTruthy());
+  });
+});
+
+// Galat yang bukan GalatApi (mis. error JS tak terduga) → PESAN_SISTEM, sama dengan halaman lain.
+describe("AlurPeminjaman galat non-API (IR-UI-04)", () => {
+  it("test_IR_UI_04_identifikasi_anggota_galat_non_api_tampil_pesan_sistem", async () => {
+    mockIdentifikasiAnggota.mockRejectedValueOnce(new Error("tak terduga"));
+    render(<AlurPeminjaman />);
+    await act(async () => pemindai.onHasil("AGT-000001"));
+    await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
+  });
+
+  it("test_IR_UI_04_validasi_item_galat_non_api_tampil_pesan_sistem", async () => {
+    mockIdentifikasiAnggota.mockResolvedValueOnce(ANGGOTA_LAYAK);
+    mockValidasiItem.mockRejectedValueOnce(new Error("tak terduga"));
+    render(<AlurPeminjaman />);
+    await act(async () => pemindai.onHasil("AGT-000001"));
+    await waitFor(() => expect(pemindai.label).toBe("Kode Eksemplar"));
+    await act(async () => pemindai.onHasil("EKS-000001"));
+    await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
+  });
+
+  it("test_IR_UI_04_cari_anggota_galat_non_api_tampil_pesan_sistem", async () => {
+    mockCariAnggota.mockRejectedValueOnce(new Error("tak terduga"));
+    render(<AlurPeminjaman />);
+    fireEvent.change(screen.getByLabelText("Kata kunci pencarian anggota"), {
+      target: { value: "Siti" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Cari" }));
+    await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
+  });
+
+  it("test_IR_UI_04_konfirmasi_galat_non_api_tampil_pesan_sistem", async () => {
+    mockIdentifikasiAnggota.mockResolvedValueOnce(ANGGOTA_LAYAK);
+    mockValidasiItem.mockResolvedValueOnce(ITEM_VALID);
+    mockKonfirmasiPeminjaman.mockRejectedValueOnce(new Error("tak terduga"));
+    render(<AlurPeminjaman />);
+    await act(async () => pemindai.onHasil("AGT-000001"));
+    await waitFor(() => expect(pemindai.label).toBe("Kode Eksemplar"));
+    await act(async () => pemindai.onHasil("EKS-000001"));
+    await waitFor(() => screen.getByText("Bumi Manusia"));
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Konfirmasi Peminjaman" })),
+    );
+    await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
   });
 });

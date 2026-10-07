@@ -12,7 +12,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Pesan } from "@/components/ui/Pesan";
 import { Tombol } from "@/components/ui/Tombol";
 import { formatTanggal, formatRupiah } from "@/lib/format";
-import { GalatApi } from "@/lib/galat";
+import { GalatApi, PESAN_SISTEM } from "@/lib/galat";
 import { labelStatus } from "@/lib/label";
 import {
   type DaftarItemKeluar,
@@ -88,7 +88,7 @@ export function AlurHilangRusak() {
       const data = await daftarItemAnggota(kode.trim());
       setDaftar(data);
     } catch (e) {
-      setGalat(e instanceof GalatApi ? e.pesan : "Terjadi kesalahan. Coba lagi.");
+      setGalat(e instanceof GalatApi ? e.pesan : PESAN_SISTEM);
     } finally {
       setSedangProses(false);
     }
@@ -113,7 +113,7 @@ export function AlurHilangRusak() {
           setTahap("form");
         }
       } catch (e) {
-        setGalat(e instanceof GalatApi ? e.pesan : "Terjadi kesalahan. Coba lagi.");
+        setGalat(e instanceof GalatApi ? e.pesan : PESAN_SISTEM);
       } finally {
         setSedangProses(false);
       }
@@ -130,7 +130,7 @@ export function AlurHilangRusak() {
       setHasilCari(data.data);
       setLebihBanyak(data.total > data.data.length);
     } catch (e) {
-      setGalat(e instanceof GalatApi ? e.pesan : "Terjadi kesalahan. Coba lagi.");
+      setGalat(e instanceof GalatApi ? e.pesan : PESAN_SISTEM);
       setHasilCari(null);
       setLebihBanyak(false);
     } finally {
@@ -170,7 +170,7 @@ export function AlurHilangRusak() {
       setHasil(data);
       setTahap("sukses");
     } catch (e) {
-      setGalat(e instanceof GalatApi ? e.pesan : "Terjadi kesalahan. Coba lagi.");
+      setGalat(e instanceof GalatApi ? e.pesan : PESAN_SISTEM);
     } finally {
       setSedangProses(false);
     }
