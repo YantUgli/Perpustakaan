@@ -161,6 +161,7 @@ def test_FR_HLR_01_daftar_item_dipinjam_anggota_dari_kode(db: Session):
             tanggal_pinjam=i1.tanggal_pinjam,
             jatuh_tempo=HARI_INI - timedelta(days=4),
             hari_terlambat=4,
+            nominal_penggantian=100_000,
         ),
         hilang_rusak.ItemAktif(
             item_id=i2.id,
@@ -169,6 +170,7 @@ def test_FR_HLR_01_daftar_item_dipinjam_anggota_dari_kode(db: Session):
             tanggal_pinjam=i2.tanggal_pinjam,
             jatuh_tempo=HARI_INI + timedelta(days=2),
             hari_terlambat=0,
+            nominal_penggantian=100_000,
         ),
     ]
 
@@ -177,6 +179,48 @@ def test_FR_HLR_01_kode_anggota_tidak_dikenal_404(db: Session):
     g = _galat(hilang_rusak.daftar_item_anggota, db, "AGT-999999")
     assert (g.kode, g.status_code) == ("HLR_ANGGOTA_TIDAK_ADA", 404)
     assert "AGT-999999" in g.pesan
+
+
+def test_FR_HLR_04_daftar_item_memuat_nominal_penggantian(db: Session):
+    """Nominal = harga judul apa adanya, tanpa denda walau item sudah terlambat (BR-15)."""
+    a = pabrik.anggota(db)
+    trx = _transaksi(db, a)
+    _dipinjam(db, trx, terlambat=30, harga=47_250, judul="Arus Balik")
+    _dipinjam(db, trx, terlambat=-3, harga=120_000, judul="Bumi Manusia")
+
+    d = hilang_rusak.daftar_item_anggota(db, a.kode)
+    assert [(i.judul, i.nominal_penggantian) for i in d.item] == [
+        ("Arus Balik", 47_250),
+        ("Bumi Manusia", 120_000),
+    ]
+
+
+def test_FR_HLR_04_nominal_daftar_sama_dengan_tagihan_dibentuk(db: Session, monkeypatch):
+    """Satu sumber: daftar dan tagihan sama-sama lewat `_nominal_penggantian`."""
+    a = pabrik.anggota(db)
+    item, _ = _dipinjam(db, _transaksi(db, a), terlambat=12, harga=55_000)
+    (sebelum,) = hilang_rusak.daftar_item_anggota(db, a.kode).item
+    assert sebelum.nominal_penggantian == 55_000
+    assert _catat(db, item).tagihan.nominal == sebelum.nominal_penggantian
+
+    # Bila aturannya diubah di satu tempat, daftar dan tagihan ikut berubah bersama.
+    monkeypatch.setattr(hilang_rusak, "_nominal_penggantian", lambda harga: harga + 1)
+    item2, _ = _dipinjam(db, _transaksi(db, a), harga=30_000)
+    (daftar2,) = hilang_rusak.daftar_item_anggota(db, a.kode).item
+    assert daftar2.nominal_penggantian == 30_001
+    assert _catat(db, item2).tagihan.nominal == 30_001
+
+
+def test_FR_HLR_04_nominal_daftar_mengikuti_harga_judul_saat_ini(db: Session):
+    """Daftar = informasi; memakai harga judul saat ini, sama dengan yang dipakai saat dicatat."""
+    a = pabrik.anggota(db)
+    item, e = _dipinjam(db, _transaksi(db, a), harga=80_000)
+    judul = db.get(JudulBuku, _segar(db, Eksemplar, e.id).judul_buku_id)
+    judul.harga = 95_000
+    db.flush()
+    (i,) = hilang_rusak.daftar_item_anggota(db, a.kode).item
+    assert i.nominal_penggantian == 95_000
+    assert _catat(db, item).tagihan.nominal == 95_000
 
 
 # --------------------------------------------------------------------------- pencatatan
@@ -520,6 +564,18 @@ def test_HLR_alur_api_daftar_lalu_catat(client, db: Session, admin_masuk):
     assert (body["status"], body["tagihan"]["nominal"]) == ("RUSAK", 72_000)
     assert "denda" not in body and "denda" not in body["tagihan"]
     assert _segar(db, ItemTransaksi, item.id).admin_pencatat_id == admin_masuk.id
+
+
+def test_FR_HLR_04_api_daftar_item_nominal_penggantian_tanpa_harga_judul(
+    client, db: Session, admin_masuk
+):
+    a = pabrik.anggota(db)
+    _dipinjam(db, _transaksi(db, a), terlambat=20, harga=63_500)
+    r = client.get(f"{API}/anggota/{a.kode}")
+    assert r.status_code == 200, r.text
+    (item,) = r.json()["item"]
+    assert item["nominal_penggantian"] == 63_500
+    assert "harga_judul" not in item and "harga" not in item
 
 
 def test_HLR_api_galat_berformat_standar_dan_jenis_tidak_sah(client, db: Session, admin_masuk):

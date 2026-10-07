@@ -48,6 +48,7 @@ class ItemAktif:
     tanggal_pinjam: date
     jatuh_tempo: date
     hari_terlambat: int
+    nominal_penggantian: int
 
 
 @dataclass(frozen=True)
@@ -99,7 +100,9 @@ def _galat_tidak_dipinjam(item: ItemTransaksi, kode_eksemplar: str) -> GalatBisn
 def daftar_item_anggota(db: Session, kode_anggota: str) -> DaftarItem:
     """FR-HLR-01: item Dipinjam milik anggota (kode dari QR atau diketik). Tidak mengubah data.
 
-    `hari_terlambat` hanya informasi; tidak ada aturan yang bergantung padanya di sini."""
+    `hari_terlambat` hanya informasi; tidak ada aturan yang bergantung padanya di sini.
+    `nominal_penggantian` (FR-HLR-04) juga informasi dari harga judul saat ini; nominal final
+    dibentuk saat dicatat."""
     kode = normalisasi_kode(kode_anggota)
     a = db.scalar(select(Anggota).where(Anggota.kode == kode))
     if a is None:
@@ -108,7 +111,7 @@ def daftar_item_anggota(db: Session, kode_anggota: str) -> DaftarItem:
         )
     hari_ini = hari_ini_wib()
     baris = db.execute(
-        select(ItemTransaksi, Eksemplar.kode, JudulBuku.judul)
+        select(ItemTransaksi, Eksemplar.kode, JudulBuku.judul, JudulBuku.harga)
         .join(TransaksiPeminjaman, ItemTransaksi.transaksi_id == TransaksiPeminjaman.id)
         .join(Eksemplar, ItemTransaksi.eksemplar_id == Eksemplar.id)
         .join(JudulBuku, Eksemplar.judul_buku_id == JudulBuku.id)
@@ -128,13 +131,21 @@ def daftar_item_anggota(db: Session, kode_anggota: str) -> DaftarItem:
                 tanggal_pinjam=i.tanggal_pinjam,
                 jatuh_tempo=i.jatuh_tempo,
                 hari_terlambat=kalkulasi.hitung_hari_terlambat(i.jatuh_tempo, hari_ini),
+                nominal_penggantian=_nominal_penggantian(harga),
             )
-            for i, kode_eks, judul in baris
+            for i, kode_eks, judul, harga in baris
         ],
     )
 
 
 # --------------------------------------------------------------------------------------- pencatatan
+
+
+def _nominal_penggantian(harga_judul: int) -> int:
+    """FR-HLR-04/BR-15: nominal penggantian = harga judul, tanpa denda keterlambatan.
+
+    Satu-satunya sumber nominal: dipakai daftar item (informasi) dan saat tagihan dibentuk."""
+    return harga_judul
 
 
 def _bentuk_tagihan_penggantian(db: Session, item_id: int, nominal: int, tanggal: date) -> Tagihan:
@@ -208,7 +219,7 @@ def _catat(
     e.status = StatusEksemplar(jenis.value)  # Hilang/Rusak sama nama di kedua kosakata
     db.flush()
     # FR-HLR-04/BR-15: senilai harga judul, tanpa denda walau item terlambat.
-    tagihan = _bentuk_tagihan_penggantian(db, item.id, judul.harga, hari_ini)
+    tagihan = _bentuk_tagihan_penggantian(db, item.id, _nominal_penggantian(judul.harga), hari_ini)
     selesai = pengembalian.tutup_transaksi_bila_selesai(db, item.transaksi_id)  # FR-KMB-08
     return HasilPencatatan(
         item_id=item.id,
