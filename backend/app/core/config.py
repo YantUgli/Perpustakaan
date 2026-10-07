@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     admin_awal_email: str | None = None
     admin_awal_password: str | None = None
 
+    # Password semua akun `python -m app.seed skenario` / `reset` (dev/staging). Jangan di-commit.
+    skenario_password: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -41,6 +41,8 @@ uv run alembic upgrade head                  # jalankan migration ke DB dev
 uv run python -m app.seed admin              # admin awal dari env ADMIN_AWAL_* (password tak pernah dicetak)
 uv run python -m app.seed data-uji           # kategori, rak, ±60 judul (dev/staging saja; idempoten)
 uv run python -m app.seed performa           # 10.000 eksemplar untuk uji NFR-PRF-01 (dev/staging; idempoten)
+uv run python -m app.seed skenario            # 10 akun QA bertanggal mundur (dev/staging; butuh SKENARIO_PASSWORD & admin)
+uv run python -m app.seed reset --ya <nama_db> # kosongkan semua kecuali admin, lalu data-uji + skenario (dev/staging)
 uv run uvicorn app.main:app --reload         # server dev → http://localhost:8000/api/v1/docs
 
 # frontend
@@ -57,6 +59,22 @@ reverse proxy yang meneruskan `/api/v1` ke FastAPI pada origin yang sama (sepert
 
 > ⚠ Server produksi **wajib** `APP_ENV=production` (nilai sah: `dev` | `staging` | `production`).
 > Produksi hanya di-seed akun admin (OQ-15). Admin lupa password → jalankan seed admin dengan email lain (OQ-14).
+
+## Data uji skenario (QA)
+
+`seed skenario` membuat 10 akun `<skenario>@skenario.example` (terlambat 0/1/7/8/70/71 hari, tiga pinjaman aktif,
+tagihan Denda dan Penggantian Belum Lunas, tanpa pinjaman) dengan tanggal relatif terhadap hari ini (WIB).
+Rincian: `docs/proyek/decisions.md` §B "Seed skenario & reset".
+
+- **Prasyarat:** admin sudah di-seed dan `SKENARIO_PASSWORD` (≥ 8 karakter) diisi di env server; password itu
+  dipakai semua akun skenario.
+- **Reset sebelum setiap sesi uji:** `uv run python -m app.seed reset --ya <nama_db>`. `<nama_db>` wajib sama
+  dengan DB yang dituju; host dan nama DB dicetak lebih dulu.
+- **Data bergeser harian:** skenario "terlambat 7 hari" menjadi 8 hari keesokan harinya.
+- **Ikut terhapus:** semua sesi (termasuk admin; semua orang login ulang) dan data performa. Jalankan ulang
+  `seed performa` sebelum uji NFR-PRF.
+- **Staging:** reset hanya **sebelum** sesi UAT, tidak saat sesi berlangsung (data yang dimasukkan client ikut terhapus).
+- Tabel email, kode anggota, dan kode eksemplar tiap skenario dicetak di akhir perintah.
 
 ## Alamat (dev)
 

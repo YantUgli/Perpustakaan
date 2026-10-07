@@ -3,6 +3,7 @@
 "Hari ini" dipatok 15/11/2026 WIB. Konkurensi (NFR-REL-02) ada di test_hilang_rusak_konkurensi.py.
 """
 
+import ast
 import re
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -375,6 +376,9 @@ def test_FR_HLR_05_tidak_ada_jalur_otomatis_ke_hilang_setelah_plafon(db: Session
 _PENULIS_HILANG = re.compile(
     r"status[\"']?\s*[=:]\s*(Status(Item|Eksemplar)\.HILANG|[\"']HILANG[\"'])", re.IGNORECASE
 )
+# Pengecualian tunggal: seed skenario QA (CLI dev/staging, ditolak di production — OQ-15) sengaja
+# menulis item & eksemplar HILANG bertanggal mundur untuk uji FR-TGH-04. Bukan jalur aplikasi.
+_BOLEH_MENULIS_HILANG = {"seed/skenario.py"}
 
 
 def test_FR_HLR_05_tidak_ada_penetapan_hilang_otomatis_maupun_penjadwal():
@@ -385,10 +389,38 @@ def test_FR_HLR_05_tidak_ada_penetapan_hilang_otomatis_maupun_penjadwal():
         f.relative_to(app).as_posix()
         for f in app.rglob("*.py")
         if _PENULIS_HILANG.search(f.read_text(encoding="utf-8"))
+        and f.relative_to(app).as_posix() not in _BOLEH_MENULIS_HILANG
     ]
     assert pelanggar == []
     penjadwal = re.compile(r"apscheduler|celery|repeat_every|BackgroundTasks|on_event|lifespan")
     assert [f.name for f in app.rglob("*.py") if penjadwal.search(f.read_text("utf-8"))] == []
+
+
+def _import_seed(modul: str, berkas: Path, app: Path) -> list[str]:
+    """Nama modul `app.seed…` yang di-import berkas (absolut maupun relatif)."""
+    paket = ["app", *berkas.relative_to(app).parent.parts]
+    hasil = []
+    for node in ast.walk(ast.parse(modul)):
+        if isinstance(node, ast.Import):
+            hasil += [a.name for a in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            dasar = ".".join(paket[: len(paket) - node.level + 1]) if node.level else ""
+            nama = ".".join(x for x in (dasar, node.module) if x)
+            hasil += [nama, *(f"{nama}.{a.name}" for a in node.names)]
+    return [n for n in hasil if n == "app.seed" or n.startswith("app.seed.")]
+
+
+def test_FR_HLR_05_seed_tidak_terjangkau_dari_jalur_aplikasi():
+    """Penutup celah `_BOLEH_MENULIS_HILANG`: tak ada berkas di app/ di luar app/seed/ yang
+    meng-import `app.seed`, jadi seed skenario (penulis Hilang) hanya terjangkau lewat CLI."""
+    app = Path(__file__).resolve().parents[1] / "app"
+    pelanggar = {
+        f.relative_to(app).as_posix(): seed
+        for f in app.rglob("*.py")
+        if f.relative_to(app).parts[0] != "seed"
+        and (seed := _import_seed(f.read_text(encoding="utf-8"), f, app))
+    }
+    assert pelanggar == {}
 
 
 def test_FR_HLR_05_K_01_tidak_ada_route_anggota_yang_mengubah_item_atau_eksemplar():
