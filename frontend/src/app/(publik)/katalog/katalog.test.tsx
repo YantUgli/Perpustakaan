@@ -78,6 +78,18 @@ const halamanKatalog = (data: unknown[], total = data.length, halaman = 1) => ({
 const params = (p: Record<string, string>) => ({ searchParams: Promise.resolve(p) });
 const detail = (id: string) => ({ params: Promise.resolve({ id }) });
 
+/**
+ * Foto dekoratif halaman publik di dalam `wadah`: `alt=""` dan pembungkus `aria-hidden` yang `hidden` di bawah
+ * breakpoint-nya (tidak diunduh di layar kecil). Mengembalikan `src` setiap foto.
+ */
+function fotoDekoratif(wadah: Element) {
+  return [...wadah.querySelectorAll("img")].map((img) => {
+    expect(img.getAttribute("alt")).toBe("");
+    expect(img.closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+    return img.getAttribute("src")!;
+  });
+}
+
 describe("Katalog /katalog (FR-KTL-01/02/04, IR-UI-05)", () => {
   it("FR_KTL_02_q_dikirim_apa_adanya_dan_di_encode", async () => {
     const q = "  Bumi & Langit/100%";
@@ -476,6 +488,13 @@ describe("Katalog /katalog — filter & urutan (OQ-44, hal-03/04)", () => {
     expect(panel.className).not.toMatch(/(^|\s)hidden(\s|$)/);
   });
 
+  it("hal_03_hero_katalog_foto_dekoratif_kolom_cari_di_dalamnya", async () => {
+    await renderSemua();
+    const hero = screen.getByRole("heading", { level: 1 }).closest("header")!;
+    expect(within(hero).getByRole("search")).toBeTruthy();
+    expect(fotoDekoratif(hero)).toEqual([expect.stringContaining("banner-katalog")]);
+  });
+
   it("FR_KTL_01_OQ_44_kartu_vertikal_cover_di_atas", async () => {
     await renderSemua();
     const kartu = screen.getByRole("article");
@@ -605,8 +624,10 @@ describe("Beranda / (FR-KTL-05, OQ-43)", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
       "Temukan Buku, Jelajahi Pengetahuan",
     );
-    // D1: panel hero dekoratif CSS, tanpa foto apa pun.
-    expect(container.querySelector("img")).toBeNull();
+    // Hero: satu foto dekoratif (menggantikan panel CSS D1), hanya mulai `lg`.
+    const hero = screen.getByRole("heading", { level: 1 }).closest("section")!;
+    expect(fotoDekoratif(hero)).toEqual([expect.stringContaining("hero-beranda")]);
+    expect(container.querySelectorAll("img")).toHaveLength(1);
     // D5: teks Tentang = paragraf Profil dari sumber bersama, bukan teks baru.
     const tentang = screen.getByRole("region", { name: "Tentang Perpustakaan Naratif" });
     const profil = bagianTentang("Profil")?.paragraf?.[0];
@@ -679,8 +700,11 @@ describe("Tentang /tentang (FR-KTL-05)", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
       "Tentang Perpustakaan Naratif",
     );
-    // Panel hero dekoratif CSS, tanpa foto apa pun (hal-06 memakai foto; dibuang).
-    expect(container.querySelector("img")).toBeNull();
+    // hal-06: foto hero + foto di samping Profil, keduanya dekoratif (bukan foto ruangan sebenarnya).
+    expect(fotoDekoratif(container)).toEqual([
+      expect.stringContaining("hero-tentang"),
+      expect.stringContaining("profil-tentang"),
+    ]);
 
     // Keputusan 1: paragraf pertama Profil UTUH jadi pembuka hero, tidak diulang di bagian Profil.
     const [pembuka, ...sisaProfil] = bagianTentang("Profil")!.paragraf!;

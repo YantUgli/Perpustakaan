@@ -1,5 +1,7 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 
+import { fotoHeroTentang, fotoProfilTentang } from "@/assets/foto";
 import { KartuCtaDaftar } from "@/components/publik/KartuCtaDaftar";
 import { PanelHero } from "@/components/publik/PanelHero";
 import { Ikon, type NamaIkon } from "@/components/ui/Ikon";
@@ -99,7 +101,8 @@ function IsiStandar({ b, paragraf = b.paragraf }: { b: BagianTentang; paragraf?:
  * FR-KTL-05: isi halaman Tentang dengan tata letak hal-06 (susulan 5.4.2). Seluruh teks faktual dari `bagian`
  * apa adanya: paragraf pertama Profil utuh menjadi pembuka hero (keputusan 1), kartu nilai tanpa judul
  * (keputusan 3), fasilitas berlabel sampai titik dua pertama, lokasi tanpa tautan peta (keputusan 4), kartu CTA
- * bersama beranda (keputusan 5, BR-03). Foto, angka, e-book, dan reservasi hal-06 dibuang. Setiap slot bagian
+ * bersama beranda (keputusan 5, BR-03). Angka, e-book, dan reservasi hal-06 dibuang; foto hero & foto samping
+ * Profil hanya dekoratif (`alt=""`, bukan foto ruangan perpustakaan yang sebenarnya). Setiap slot bagian
  * menampilkan penanda bila `menunggu` terisi; bagian di luar enam slot tetap ditampilkan (tidak hilang diam-diam).
  */
 export function IsiTentang({ bagian }: { bagian: BagianTentang[] }) {
@@ -132,21 +135,43 @@ export function IsiTentang({ bagian }: { bagian: BagianTentang[] }) {
             {pembuka && <p className="leading-relaxed text-navy/80 sm:text-lg">{pembuka}</p>}
           </div>
         </div>
-        <PanelHero />
+        <PanelHero foto={fotoHeroTentang} />
       </section>
 
       {(profil || nilai) && (
         <div
-          className={`${KONTAINER} grid gap-12 py-12 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16 lg:py-16`}
+          className={`${KONTAINER} grid gap-12 py-12 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-x-16 lg:gap-y-8 lg:py-16 2xl:grid-cols-[minmax(0,4fr)_minmax(0,4fr)_minmax(0,6fr)] 2xl:gap-12`}
         >
           {profil && (
-            <section aria-labelledby={idBagian(profil.judul)} className="flex flex-col gap-4">
+            <section
+              aria-labelledby={idBagian(profil.judul)}
+              className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1"
+            >
               <JudulBagian id={idBagian(profil.judul)}>{profil.judul}</JudulBagian>
               <IsiStandar b={profil} paragraf={sisaProfil} />
             </section>
           )}
+          {/* hal-06: foto mulai `lg` (di bawahnya tidak diunduh). `lg`: di bawah teks Profil (kolom kiri);
+              `2xl`: kolom tengah antara Profil dan Nilai seperti desain. */}
+          {profil && (
+            <div
+              aria-hidden="true"
+              className="relative hidden aspect-[4/3] overflow-hidden rounded-2xl bg-line/40 lg:col-start-1 lg:row-start-2 lg:block 2xl:col-start-2 2xl:row-start-1 2xl:aspect-auto 2xl:min-h-80"
+            >
+              <Image
+                src={fotoProfilTentang}
+                alt=""
+                fill
+                sizes="(min-width: 1536px) 25vw, 40vw"
+                className="object-cover object-[50%_60%]"
+              />
+            </div>
+          )}
           {nilai && (
-            <section aria-labelledby={idBagian(nilai.judul)} className="flex flex-col gap-5">
+            <section
+              aria-labelledby={idBagian(nilai.judul)}
+              className="flex flex-col gap-5 lg:col-start-2 lg:row-span-2 lg:row-start-1 2xl:col-start-3 2xl:row-span-1"
+            >
               <JudulBagian id={idBagian(nilai.judul)}>{nilai.judul}</JudulBagian>
               {nilai.paragraf?.map((t) => (
                 <p key={t} className="text-sm leading-relaxed text-navy/85">
