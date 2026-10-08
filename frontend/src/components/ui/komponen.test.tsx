@@ -117,6 +117,33 @@ describe("Isian & Pesan (IR-UI-04)", () => {
     expect(screen.getByLabelText("Email").getAttribute("aria-invalid")).toBeNull();
   });
 
+  it("tanpa awalan/akhiran: input langsung di bawah wrapper, kelas tanpa padding tambahan", () => {
+    const { container } = render(<Isian label="Email" name="email" />);
+    const input = screen.getByLabelText("Email");
+    expect(input.parentElement).toBe(container.firstElementChild);
+    expect(input.className).not.toMatch(/\bpl-11\b|\bpr-12\b|\s{2}/);
+  });
+
+  it("IR_UI_04_awalan_akhiran_tidak_mengubah_aria_pada_input", () => {
+    render(
+      <Isian
+        label="Password"
+        name="password"
+        galat="Password wajib diisi."
+        awalan={<span data-testid="awalan" />}
+        akhiran={<button type="button">Tampilkan password</button>}
+      />,
+    );
+    const input = screen.getByLabelText("Password");
+    expect(input.className).toContain("pl-11");
+    expect(input.className).toContain("pr-12");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    const idGalat = input.getAttribute("aria-describedby");
+    expect(document.getElementById(idGalat!)?.textContent).toBe("Password wajib diisi.");
+    expect(screen.getByTestId("awalan").parentElement?.getAttribute("aria-hidden")).toBe("true");
+    expect(screen.getByRole("button", { name: "Tampilkan password" })).toBeTruthy();
+  });
+
   it("IR_UI_04_pesan_galat_tampil_penuh_dan_diumumkan", () => {
     const pesan = "Eksemplar EKS-000012 berstatus Dipinjam sehingga tidak dapat dipinjam.";
     render(<Pesan jenis="galat">{pesan}</Pesan>);
