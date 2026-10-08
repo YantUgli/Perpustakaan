@@ -28,8 +28,10 @@ function aktif(pathname: string, href: string) {
 }
 
 /**
- * Header situs publik (Brief §9.1, hal-02..06). Mulai `lg`: tiga zona (logo | menu di tengah | aksi); di bawahnya
- * menu turun ke baris kedua. Tanpa ikon cari: kolom cari ada di beranda & katalog (IR-UI-05). `sesi` null = pengunjung umum; nama pengguna panjang dipotong (`title` = nama utuh).
+ * Header situs publik (Brief §9.1, hal-02..06). Mulai `lg`: tiga zona (logo | menu di tengah | aksi). Di bawah `md`
+ * menu berada di baris sendiri dan membungkus ke baris berikutnya bila tidak muat (mis. 320 px), tanpa gulir
+ * horizontal, sehingga setiap label selalu terlihat utuh. Tanpa ikon cari: kolom cari ada di beranda & katalog
+ * (IR-UI-05). `sesi` null = pengunjung umum; nama pengguna panjang dipotong (`title` = nama utuh).
  */
 export function HeaderPublik({ sesi }: { sesi: Sesi | null }) {
   const pathname = usePathname();
@@ -42,7 +44,7 @@ export function HeaderPublik({ sesi }: { sesi: Sesi | null }) {
           <Logo ukuran="responsif" />
         </Link>
         <nav aria-label="Menu utama" className="order-3 w-full md:order-none md:w-auto">
-          <ul className="flex gap-5 overflow-x-auto text-sm lg:gap-10 lg:text-base">
+          <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm sm:gap-x-5 lg:gap-x-10 lg:text-base">
             {MENU.map((m) => (
               <li key={m.href}>
                 <Link
