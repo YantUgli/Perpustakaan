@@ -301,27 +301,38 @@ const PATH = {
       />
     </>
   ),
-  /** Panah keluar dari kurung (Peminjaman: buku keluar). */
-  panahKeluar: (
-    <path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10m0-8h10m-4-4 4 4-4 4" />
+  /**
+   * Buku + panah keluar (Peminjaman: buku dibawa pulang). Sengaja buku tertutup, bukan kurung/pintu, agar tidak
+   * terbaca sebagai ikon keluar/masuk akun (cek manual Ayen 08/10/2026).
+   */
+  bukuKeluar: (
+    <path d="M3.5 5a2 2 0 0 1 2-2h8v14h-8a2 2 0 0 0-2 2Zm0 14a2 2 0 0 0 2 2h8v-4M7 7h3.5M16 12h6m-2.5-2.5L22 12l-2.5 2.5" />
   ),
-  panahKeluarIsi: (
-    <path
-      fill="currentColor"
-      stroke="none"
-      d="M3.5 3H11v2.5H6v13h5V21H3.5ZM10 10.75h6.5V7l5 5-5 5v-3.75H10Z"
-    />
+  bukuKeluarIsi: (
+    <>
+      <path
+        fill="currentColor"
+        stroke="none"
+        fillRule="evenodd"
+        d="M3.5 5a2 2 0 0 1 2-2H14v14.5H5.5a.75.75 0 0 0 0 1.5H14V21H5.5a2 2 0 0 1-2-2ZM6.75 6.25v1.5h4v-1.5Z"
+      />
+      <path fill="currentColor" stroke="none" d="M15.5 10.75H19V7.5l4.5 4.5-4.5 4.5v-3.25h-3.5Z" />
+    </>
   ),
-  /** Panah masuk ke kurung (Pengembalian: buku kembali). */
-  panahKembali: (
-    <path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M4 12h10m-4-4 4 4-4 4" />
+  /** Panah masuk ke buku (Pengembalian: buku kembali ke perpustakaan). */
+  bukuMasuk: (
+    <path d="M10.5 5a2 2 0 0 1 2-2h8v14h-8a2 2 0 0 0-2 2Zm0 14a2 2 0 0 0 2 2h8v-4M14 7h3.5M1.5 12h6M5 9.5 7.5 12 5 14.5" />
   ),
-  panahKembaliIsi: (
-    <path
-      fill="currentColor"
-      stroke="none"
-      d="M13 3h7.5v18H13v-2.5h5v-13h-5ZM2.5 10.75H9V7l5 5-5 5v-3.75H2.5Z"
-    />
+  bukuMasukIsi: (
+    <>
+      <path
+        fill="currentColor"
+        stroke="none"
+        fillRule="evenodd"
+        d="M10.5 5a2 2 0 0 1 2-2H21v14.5h-8.5a.75.75 0 0 0 0 1.5H21V21h-8.5a2 2 0 0 1-2-2ZM13.75 6.25v1.5h4v-1.5Z"
+      />
+      <path fill="currentColor" stroke="none" d="M1 10.75h3.5V7.5L9 12l-4.5 4.5v-3.25H1Z" />
+    </>
   ),
   /** Segitiga peringatan (Hilang / Rusak). */
   peringatan: <path d="M12 3.5 2.5 20h19ZM12 10v4.5m0 2.75v.01" />,
