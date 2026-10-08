@@ -34,3 +34,25 @@ export function judulAlasan(kode: string): string {
 export function pinjamanTerdekat<T>(daftar: T[], jumlah = 3): T[] {
   return daftar.slice(0, jumlah);
 }
+
+/** Batas `per_halaman` backend (decisions §B "Daftar berhalaman"). */
+export const PER_HALAMAN_TAGIHAN = 100;
+
+type HalamanStatus = { data: { status: string }[]; total: number };
+
+/**
+ * D1 (Ayen 08/10/2026), FR-AGT-04 ringkas: jumlah tagihan `BELUM_LUNAS` untuk kartu "Tagihan Aktif". Halaman 1
+ * lebih dulu, lalu halaman 2..ceil(total/100) saja. Tidak menentukan kelayakan apa pun.
+ */
+export async function hitungTagihanAktif(
+  ambil: (path: string) => Promise<HalamanStatus>,
+): Promise<number> {
+  // Hanya tampilan (D1); kelayakan dari /anggota/kelayakan
+  const path = (h: number) => `/anggota/tagihan?halaman=${h}&per_halaman=${PER_HALAMAN_TAGIHAN}`;
+  const pertama = await ambil(path(1));
+  const jumlahHalaman = Math.ceil(pertama.total / PER_HALAMAN_TAGIHAN);
+  const sisa = await Promise.all(
+    Array.from({ length: Math.max(jumlahHalaman - 1, 0) }, (_, i) => ambil(path(i + 2))),
+  );
+  return [pertama, ...sisa].flatMap((h) => h.data).filter((t) => t.status === "BELUM_LUNAS").length;
+}

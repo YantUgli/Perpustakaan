@@ -54,6 +54,21 @@ const halaman = (data: unknown[], total = data.length) => ({
   per_halaman: 20,
 });
 
+/** Tagihan dashboard (D1): satu halaman `per_halaman=100` berisi status yang diberikan. */
+function aturTagihan(status: string[]) {
+  respons.set("/anggota/tagihan?halaman=1&per_halaman=100", {
+    data: status.map((s, i) => ({ id: i + 1, status: s })),
+    total: status.length,
+    halaman: 1,
+    per_halaman: 100,
+  });
+}
+
+/** Kartu ringkas = satu tautan; nama aksesibelnya diawali label kartu. */
+function kartu(label: string): HTMLElement {
+  return screen.getByRole("link", { name: new RegExp(`^${label}`) });
+}
+
 beforeEach(() => {
   respons.clear();
   dipanggil.length = 0;
@@ -65,10 +80,117 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", []);
     respons.set("/anggota/riwayat?per_halaman=1", halaman([], 12));
+    aturTagihan([]);
     render(await Dashboard());
     expect(screen.getByText("Anda dapat meminjam buku")).toBeTruthy();
-    expect(screen.getByText("12")).toBeTruthy();
+    expect(kartu("Riwayat Peminjaman").textContent).toContain("12");
     expect(screen.getByText("Belum ada pinjaman aktif")).toBeTruthy();
+  });
+
+  it("FR_AGT_05_layak_tombol_lihat_katalog_ke_katalog", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    aturTagihan([]);
+    render(await Dashboard());
+    const banner = screen.getByRole("status");
+    const tombol = within(banner).getByRole("link", { name: /Lihat Katalog Buku/ });
+    expect(tombol.getAttribute("href")).toBe("/katalog");
+  });
+
+  it("D1_banner_tetap_layak_walau_daftar_tagihan_memuat_BELUM_LUNAS", async () => {
+    // Angka kartu hanya tampilan; kelayakan selalu dari /anggota/kelayakan.
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    aturTagihan(["BELUM_LUNAS", "BELUM_LUNAS", "LUNAS"]);
+    render(await Dashboard());
+    expect(screen.getByText("Anda dapat meminjam buku")).toBeTruthy();
+    expect(screen.queryByText("Anda belum dapat meminjam buku")).toBeNull();
+    expect(kartu("Tagihan Aktif").textContent).toContain("2");
+  });
+
+  it("FR_AGT_04_kartu_tagihan_aktif_ke_halaman_tagihan", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    aturTagihan(["LUNAS"]);
+    render(await Dashboard());
+    const k = kartu("Tagihan Aktif");
+    expect(k.getAttribute("href")).toBe("/anggota/tagihan");
+    expect(k.textContent).toContain("0");
+    expect(k.textContent).toContain("tagihan");
+  });
+
+  it("FR_AGT_02_kartu_pinjaman_aktif_dan_riwayat_bertaut", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", PINJAMAN);
+    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 7));
+    aturTagihan([]);
+    render(await Dashboard());
+    expect(kartu("Jumlah Pinjaman Aktif").getAttribute("href")).toBe("/anggota/pinjaman");
+    expect(kartu("Jumlah Pinjaman Aktif").textContent).toContain("2");
+    expect(kartu("Riwayat Peminjaman").getAttribute("href")).toBe("/anggota/riwayat");
+  });
+
+  it("FR_AGT_02_kartu_jatuh_tempo_terdekat_normal", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", [PINJAMAN[1]]);
+    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 1));
+    aturTagihan([]);
+    render(await Dashboard());
+    const k = kartu("Jatuh Tempo Terdekat");
+    expect(k.getAttribute("href")).toBe("/anggota/pinjaman");
+    expect(k.textContent).toContain("5");
+    expect(k.textContent).toContain("hari lagi");
+    expect(k.textContent).toContain("10/10/2026");
+  });
+
+  it("FR_AGT_02_kartu_jatuh_tempo_terdekat_terlambat_dari_field", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", PINJAMAN);
+    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 2));
+    aturTagihan([]);
+    render(await Dashboard());
+    const k = kartu("Jatuh Tempo Terdekat");
+    expect(within(k).getByText("Terlambat 4 hari")).toBeTruthy();
+    expect(k.textContent).toContain("01/10/2026");
+  });
+
+  it("FR_AGT_02_kartu_jatuh_tempo_terdekat_tanpa_pinjaman", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    aturTagihan([]);
+    render(await Dashboard());
+    const k = kartu("Jatuh Tempo Terdekat");
+    expect(k.textContent).toContain("—");
+    expect(k.textContent).toContain("Tidak ada pinjaman");
+  });
+
+  it("sapaan_dengan_nama_dan_subjudul", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    aturTagihan([]);
+    render(await Dashboard());
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "Selamat Datang, Aulia Rahma",
+    );
+    expect(
+      screen.getByText(/Terima kasih telah menjadi bagian dari Perpustakaan Naratif/),
+    ).toBeTruthy();
+  });
+
+  it("lihat_semua_pinjaman_ke_halaman_pinjaman", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", PINJAMAN);
+    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 2));
+    aturTagihan([]);
+    render(await Dashboard());
+    expect(screen.getByRole("link", { name: /Lihat Semua/ }).getAttribute("href")).toBe(
+      "/anggota/pinjaman",
+    );
   });
 
   it("FR_AGT_05_terblokir_alasan_pesan_apa_adanya (judul 'Anda …' dari kode)", async () => {
@@ -84,14 +206,15 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
     });
     respons.set("/anggota/pinjaman", PINJAMAN);
     respons.set("/anggota/riwayat?per_halaman=1", halaman([], 3));
+    aturTagihan(["BELUM_LUNAS", "BELUM_LUNAS"]);
     render(await Dashboard());
     expect(screen.getByText("Anda belum dapat meminjam buku")).toBeTruthy();
     expect(screen.getByText("Anda memiliki tagihan yang belum lunas")).toBeTruthy();
     expect(screen.getByText(pesanTagihan)).toBeTruthy();
     expect(screen.getByText("Anda memiliki buku yang terlambat dikembalikan")).toBeTruthy();
     expect(screen.getByText(pesanTerlambat)).toBeTruthy();
-    // P2: tidak ada kartu "Tagihan Aktif".
-    expect(screen.queryByText(/tagihan aktif/i)).toBeNull();
+    // Terblokir: tanpa tombol katalog di banner (asumsi spec #7).
+    expect(screen.queryByRole("link", { name: /Lihat Katalog Buku/ })).toBeNull();
   });
 
   it("pinjaman terdekat: 3 pertama sesuai urutan API", async () => {
@@ -103,6 +226,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
     }));
     respons.set("/anggota/pinjaman", empat);
     respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    aturTagihan([]);
     render(await Dashboard());
     expect(screen.getAllByText(/^Buku [A-D]$/).map((e) => e.textContent)).toEqual([
       "Buku A",

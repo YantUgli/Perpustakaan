@@ -352,6 +352,19 @@ const PATH = {
       <path fill="currentColor" stroke="none" d="M6.5 11h3v7h-3Zm4.5-5h3v12h-3Zm4.5 3h3v9h-3Z" />
     </>
   ),
+  /** Kalender bercentang (kartu Jatuh Tempo Terdekat, hal-09). */
+  kalender: (
+    <>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+      <path d="M3.5 9.5h17M8 3v4M16 3v4m-6.5 7 2 2 3.5-3.5" />
+    </>
+  ),
+  /** Jam berpanah putar balik (kartu Riwayat Peminjaman, hal-09). */
+  riwayat: <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6M3.5 3.5V8H8M12 7.5V12l3 2" />,
+  /** Centang (banner kelayakan: dapat meminjam). */
+  centang: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  /** Tanda seru (banner kelayakan: belum dapat meminjam). */
+  seru: <path d="M12 5.5v8m0 4.5v.01" />,
 } satisfies Record<string, ReactNode>;
 
 export type NamaIkon = keyof typeof PATH;
