@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const router = { replace: vi.fn(), refresh: vi.fn() };
+const jalur = { saatIni: "/admin/laporan/tagihan" };
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
-  usePathname: () => "/admin/laporan/tagihan",
+  usePathname: () => jalur.saatIni,
 }));
 
 const { TombolKeluar } = await import("./TombolKeluar");
@@ -16,6 +17,7 @@ const { MENU_ADMIN, MENU_ANGGOTA, itemAktif } = await import("./menu");
 const fetchPalsu = vi.fn();
 
 beforeEach(() => {
+  jalur.saatIni = "/admin/laporan/tagihan";
   router.replace.mockReset();
   router.refresh.mockReset();
   fetchPalsu.mockReset();
@@ -97,4 +99,57 @@ describe("Menu area", () => {
     expect(screen.getByRole("button", { name: "Keluar" })).toBeTruthy();
     expect(screen.getByRole("img", { name: "Raisya Annisa" }).textContent).toBe("RA");
   });
+});
+
+describe("Navigasi area: ikon menu & logo (susulan 5.4.1, D2/D4 08/10/2026)", () => {
+  const LABEL_LOGO = "Naratif Perpustakaan, Beranda";
+
+  /** Ikon menu = svg ber-`data-ikon` di dalam tautan (dekoratif, aria-hidden). */
+  function ikonDi(tautan: HTMLElement): string | null {
+    const svg = tautan.querySelector("svg[data-ikon]");
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    return svg?.getAttribute("data-ikon") ?? null;
+  }
+
+  it.each([
+    ["anggota", MENU_ANGGOTA],
+    ["admin", MENU_ADMIN],
+  ] as const)("setiap item menu %s punya ikon", (_, menu) => {
+    for (const item of menu) expect(item.ikon).toBeTruthy();
+  });
+
+  it.each([
+    ["anggota" as const, "/anggota/riwayat", "Riwayat"],
+    ["admin" as const, "/admin/laporan/tagihan", "Laporan"],
+  ])("FR_AKN_05_menu_%s_aktif_ikon_solid_lainnya_ikon_garis", (varian, pathname, labelAktif) => {
+    jalur.saatIni = pathname;
+    render(<SidebarArea varian={varian} nama="Bryant Nanur" />);
+    const menu = varian === "admin" ? MENU_ADMIN : MENU_ANGGOTA;
+    const nav = screen.getByRole("navigation");
+    for (const item of menu) {
+      const tautan = within(nav).getByRole("link", { name: item.label });
+      if (item.label === labelAktif) {
+        expect(tautan.getAttribute("aria-current")).toBe("page");
+        expect(ikonDi(tautan)).toBe(`${item.ikon}Isi`);
+      } else {
+        expect(tautan.getAttribute("aria-current")).toBeNull();
+        expect(ikonDi(tautan)).toBe(item.ikon);
+      }
+    }
+  });
+
+  it.each(["anggota", "admin"] as const)(
+    "FR_AKN_05_logo_sidebar_dan_bilah_atas_%s_ke_beranda",
+    (varian) => {
+      jalur.saatIni = varian === "admin" ? "/admin" : "/anggota";
+      render(<SidebarArea varian={varian} nama="Bryant Nanur" />);
+      const logo = screen.getAllByRole("link", { name: LABEL_LOGO });
+      // Satu di bilah atas (< lg), satu di sidebar (≥ lg).
+      expect(logo).toHaveLength(2);
+      for (const t of logo) {
+        expect(t.getAttribute("href")).toBe("/");
+        expect(t.firstElementChild?.getAttribute("aria-hidden")).toBe("true");
+      }
+    },
+  );
 });

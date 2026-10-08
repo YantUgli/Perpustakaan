@@ -200,9 +200,155 @@ const PATH = {
       d="M6.2 2.2 9.4 2l1.9 4.9-2.4 1.9a12.5 12.5 0 0 0 6.3 6.3l1.9-2.4 4.9 1.9-.2 3.2a2.4 2.4 0 0 1-2.5 2.2A17.5 17.5 0 0 1 4 4.7a2.4 2.4 0 0 1 2.2-2.5Z"
     />
   ),
+  /*
+   * Ikon menu area (susulan 5.4.1, 08/10/2026): pasangan `<nama>` (garis, menu tidak aktif) dan `<nama>Isi`
+   * (solid, menu aktif). `bukuIsi`, `qrIsi`, `orangIsi`, dan `jamIsi` di atas dipakai ulang.
+   */
+  /** Rumah (Dashboard). */
+  beranda: <path d="M3 10.5 12 3l9 7.5M5 9v11.5h5V15h4v5.5h5V9" />,
+  berandaIsi: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M12 2 1.8 10.5l1.3 1.55L5 10.5V21.5h5.5V15.5h3v6H19V10.5l1.9 1.55 1.3-1.55Z"
+    />
+  ),
+  /** QR garis (QR Anggota). */
+  qr: (
+    <>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
+      <path d="M14 14h2.5v2.5H14ZM18 18h2.5v2.5H18ZM18 14h2.5M14 18v2.5" />
+    </>
+  ),
+  /** Buku terbuka garis (Pinjaman Saya, Data Buku & Eksemplar). */
+  buku: (
+    <path d="M12 6.5C10 5 7 4.4 3 4.7v14c4-.3 7 .3 9 1.8 2-1.5 5-2.1 9-1.8v-14c-4-.3-7 .3-9 1.8Zm0 0v14" />
+  ),
+  /** Jam garis (Riwayat). */
+  jam: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.5 2" />
+    </>
+  ),
+  /** Struk (Tagihan). */
+  struk: (
+    <>
+      <path d="M5.5 2.5h13v19l-2.2-1.5-2.1 1.5-2.2-1.5-2.2 1.5-2.1-1.5-2.2 1.5Z" />
+      <path d="M9 7.5h6M9 11h6M9 14.5h4" />
+    </>
+  ),
+  strukIsi: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      fillRule="evenodd"
+      d="M5 2h14v20.5l-2.7-1.8-2.1 1.5-2.2-1.5-2.2 1.5-2.1-1.5L5 22.5Zm3.5 4.75v1.5h7v-1.5Zm0 3.5v1.5h7v-1.5Zm0 3.5v1.5H13v-1.5Z"
+    />
+  ),
+  /** Orang garis (Profil). */
+  orang: (
+    <>
+      <circle cx="12" cy="7.5" r="4" />
+      <path d="M4 20.5a8 8 0 0 1 16 0Z" />
+    </>
+  ),
+  /** Dua orang (Data Anggota). */
+  grupOrang: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0ZM15.5 4.8a3.5 3.5 0 0 1 0 6.4M18 14.2a6.5 6.5 0 0 1 3.5 5.8" />
+    </>
+  ),
+  grupOrangIsi: (
+    <>
+      <circle cx="9" cy="8" r="3.75" fill="currentColor" stroke="none" />
+      <path fill="currentColor" stroke="none" d="M2 20.5a7 7 0 0 1 14 0Z" />
+      <path d="M15.5 4.5a3.75 3.75 0 0 1 0 7M18 13.8a7 7 0 0 1 4 6.7" strokeWidth="2" />
+    </>
+  ),
+  /** Label harga (Kategori). */
+  label: (
+    <>
+      <path d="M3 3h8.5l9.5 9.5-8.5 8.5L3 11.5Z" />
+      <circle cx="7.5" cy="7.5" r="1.5" />
+    </>
+  ),
+  labelIsi: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      fillRule="evenodd"
+      d="M2.5 2.5h9.2l10 10-9.2 9.2-10-10ZM7.5 6a1.5 1.5 0 1 0 0 3 1.5 1.5 0 1 0 0-3Z"
+    />
+  ),
+  /** Rak berisi buku (Rak). */
+  rak: (
+    <>
+      <path d="M3.5 3v18M20.5 3v18M3.5 11h17M3.5 20.5h17" />
+      <path d="M6.5 5h2v6h-2ZM10 4h2v7h-2ZM6.5 14h2v6.5h-2ZM10 15.5h2v5h-2ZM14.5 14.5l1.9-.5 1.6 6-1.9.5Z" />
+    </>
+  ),
+  rakIsi: (
+    <>
+      <path d="M3.5 3v18M20.5 3v18M3.5 11h17M3.5 20.5h17" strokeWidth="2" />
+      <path
+        fill="currentColor"
+        stroke="none"
+        d="M6 4.5h3v6.5H6Zm3.75-1H13V11H9.75ZM6 13.5h3v7H6Zm3.75 1.5H13v5.5H9.75Zm4.25-.6 2.6-.7 1.8 6.6-2.6.7Z"
+      />
+    </>
+  ),
+  /** Panah keluar dari kurung (Peminjaman: buku keluar). */
+  panahKeluar: (
+    <path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10m0-8h10m-4-4 4 4-4 4" />
+  ),
+  panahKeluarIsi: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M3.5 3H11v2.5H6v13h5V21H3.5ZM10 10.75h6.5V7l5 5-5 5v-3.75H10Z"
+    />
+  ),
+  /** Panah masuk ke kurung (Pengembalian: buku kembali). */
+  panahKembali: (
+    <path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14M4 12h10m-4-4 4 4-4 4" />
+  ),
+  panahKembaliIsi: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      d="M13 3h7.5v18H13v-2.5h5v-13h-5ZM2.5 10.75H9V7l5 5-5 5v-3.75H2.5Z"
+    />
+  ),
+  /** Segitiga peringatan (Hilang / Rusak). */
+  peringatan: <path d="M12 3.5 2.5 20h19ZM12 10v4.5m0 2.75v.01" />,
+  peringatanIsi: (
+    <path
+      fill="currentColor"
+      stroke="none"
+      fillRule="evenodd"
+      d="M12 2.5 1.5 20.75h21ZM11 9.5h2v5.5h-2Zm0 7h2v2h-2Z"
+    />
+  ),
+  /** Grafik batang (Laporan). */
+  grafik: <path d="M3.5 3.5v17h17M8 16.5v-4M12 16.5V8M16 16.5v-6" />,
+  grafikIsi: (
+    <>
+      <path d="M3.5 3v17.5H21" strokeWidth="2" />
+      <path fill="currentColor" stroke="none" d="M6.5 11h3v7h-3Zm4.5-5h3v12h-3Zm4.5 3h3v9h-3Z" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type NamaIkon = keyof typeof PATH;
+
+/** Ikon yang punya varian solid `<nama>Isi` (menu area: garis = tidak aktif, solid = aktif). */
+export type IkonBerpasangan = {
+  [K in NamaIkon]: `${K}Isi` extends NamaIkon ? K : never;
+}[NamaIkon];
 
 export function Ikon({ nama, className = "size-5" }: { nama: NamaIkon; className?: string }) {
   return (
@@ -215,6 +361,7 @@ export function Ikon({ nama, className = "size-5" }: { nama: NamaIkon; className
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
+      data-ikon={nama}
     >
       {PATH[nama]}
     </svg>
