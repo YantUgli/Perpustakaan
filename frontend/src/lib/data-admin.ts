@@ -30,6 +30,28 @@ export function queryAnggota(f: FilterAnggota): string {
   return q.toString();
 }
 
+export type FilterJudul = {
+  /** Kata kunci apa adanya (di-trim); backend yang mencocokkan judul/penulis/ISBN/kategori (OQ-24/OQ-45). */
+  q?: string;
+  halaman: number;
+};
+
+/** ASUMSI(OQ-45): filter daftar judul admin dari `searchParams`, pola sama dengan anggota. */
+export function filterJudulDariParam(p: Record<string, Param>): FilterJudul {
+  const f: FilterJudul = { halaman: halamanDariParam(p.halaman) };
+  const q = typeof p.q === "string" ? p.q.trim() : "";
+  if (q) f.q = q;
+  return f;
+}
+
+/** Query string untuk `GET /admin/judul` (urutan tetap: q, halaman); tanpa q sama seperti sebelumnya. */
+export function queryJudul(f: FilterJudul): string {
+  const q = new URLSearchParams();
+  if (f.q) q.set("q", f.q);
+  q.set("halaman", String(f.halaman));
+  return q.toString();
+}
+
 export type NilaiUbahAnggota = {
   nama: string;
   alamat: string;

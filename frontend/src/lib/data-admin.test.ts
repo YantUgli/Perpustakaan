@@ -13,10 +13,12 @@ import {
   bodyTambahEksemplar,
   bodyUbahAnggota,
   filterAnggotaDariParam,
+  filterJudulDariParam,
   pesanCoverGagal,
   pesanSuksesTambah,
   pesanSuksesUbahAnggota,
   queryAnggota,
+  queryJudul,
   teksKonfirmasiTambah,
   validasiJudul,
   validasiKategori,
@@ -53,6 +55,31 @@ describe("Daftar anggota admin (FR-AKN-10, OQ-33)", () => {
   it("FR_AKN_10_query_daftar: urutan q lalu halaman, q di-encode", () => {
     expect(queryAnggota({ q: "Budi & Ani", halaman: 2 })).toBe("q=Budi+%26+Ani&halaman=2");
     expect(queryAnggota({ halaman: 1 })).toBe("halaman=1");
+  });
+});
+
+describe("Pencarian judul admin (FR-BKU-02, OQ-45)", () => {
+  it("OQ_45_q_di_trim_dan_halaman_dibaca", () => {
+    expect(filterJudulDariParam({ q: "  Bumi Manusia ", halaman: "3" })).toEqual({
+      q: "Bumi Manusia",
+      halaman: 3,
+    });
+  });
+
+  it("OQ_45_q_kosong_atau_berulang_dibuang; halaman tak sah → 1", () => {
+    expect(filterJudulDariParam({ q: "   ", halaman: "0" })).toEqual({ halaman: 1 });
+    expect(filterJudulDariParam({ q: ["a", "b"] })).toEqual({ halaman: 1 });
+    expect(filterJudulDariParam({})).toEqual({ halaman: 1 });
+  });
+
+  it("OQ_45_OQ_24_q_tidak_dinormalisasi_di_klien (ISBN & wildcard diurus backend)", () => {
+    expect(filterJudulDariParam({ q: "978-602-03" }).q).toBe("978-602-03");
+    expect(filterJudulDariParam({ q: "100%_x" }).q).toBe("100%_x");
+  });
+
+  it("OQ_45_query_daftar: urutan q lalu halaman, q di-encode; tanpa q sama seperti sebelumnya", () => {
+    expect(queryJudul({ q: "Bumi & Laut", halaman: 2 })).toBe("q=Bumi+%26+Laut&halaman=2");
+    expect(queryJudul({ halaman: 1 })).toBe("halaman=1");
   });
 });
 
