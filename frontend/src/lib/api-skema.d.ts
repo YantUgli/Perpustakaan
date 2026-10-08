@@ -260,7 +260,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Daftar Judul */
+    /**
+     * Daftar Judul
+     * @description FR-BKU-02; ASUMSI(OQ-45): pencarian `q` dengan aturan katalog (OQ-24).
+     */
     get: operations["daftar_judul_api_v1_admin_judul_get"];
     put?: never;
     /** Tambah Judul */
@@ -2397,6 +2400,8 @@ export interface operations {
   daftar_judul_api_v1_admin_judul_get: {
     parameters: {
       query?: {
+        /** @description Judul, penulis, ISBN, atau kategori (OQ-24/OQ-45) */
+        q?: string | null;
         halaman?: number;
         per_halaman?: number;
       };

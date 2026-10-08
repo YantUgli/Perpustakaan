@@ -107,7 +107,7 @@ const berkas = (ukuran: number, type = "image/png") => {
 };
 
 describe("Daftar judul (FR-BKU-02)", () => {
-  it("FR_BKU_02_daftar_berhalaman_tanpa_pencarian_dan_tautan_kelola", async () => {
+  it("FR_BKU_02_daftar_berhalaman_dan_tautan_kelola", async () => {
     respons.set("/admin/judul?halaman=2", {
       data: [JUDUL, TANPA_COVER],
       total: 45,
@@ -130,8 +130,9 @@ describe("Daftar judul (FR-BKU-02)", () => {
     expect(screen.getByRole("link", { name: "Berikutnya" }).getAttribute("href")).toBe(
       "/admin/judul?halaman=3",
     );
-    // Tanpa pencarian (tidak ada endpoint) dan tanpa kolom stok (butuh N panggilan API).
-    expect(container.querySelector('input[name="q"], input[type="search"]')).toBeNull();
+    // Tanpa kolom stok (OQ-45: stok hanya di detail judul, FR-BKU-09).
+    const kepala = Array.from(container.querySelectorAll("th")).map((th) => th.textContent);
+    expect(kepala.join(" ")).not.toMatch(/stok|tersedia|eksemplar/i);
     // Cover dari `cover_url` API; tanpa cover → pengganti, bukan gambar rusak.
     expect(container.querySelectorAll("img")).toHaveLength(1);
     expect(container.querySelector("img")?.getAttribute("src")).toBe(
@@ -143,6 +144,79 @@ describe("Daftar judul (FR-BKU-02)", () => {
     respons.set("/admin/judul?halaman=1", { data: [], total: 0, halaman: 1, per_halaman: 20 });
     render(await DaftarJudul({ searchParams: Promise.resolve({}) }));
     expect(screen.getByText("Belum ada judul")).toBeTruthy();
+    expect(screen.queryByText("Judul tidak ditemukan")).toBeNull();
+  });
+
+  it("OQ_45_q_dikirim_ke_api_di_encode_dan_kolom_cari_terisi", async () => {
+    respons.set("/admin/judul?q=Bumi+%26+Laut&halaman=1", {
+      data: [JUDUL],
+      total: 1,
+      halaman: 1,
+      per_halaman: 20,
+    });
+    render(await DaftarJudul({ searchParams: Promise.resolve({ q: "  Bumi & Laut " }) }));
+    expect(dipanggil).toEqual(["/admin/judul?q=Bumi+%26+Laut&halaman=1"]);
+    const kolom = screen.getByLabelText(/Cari judul/) as HTMLInputElement;
+    expect(kolom.name).toBe("q");
+    expect(kolom.value).toBe("Bumi & Laut");
+    expect(screen.getByText("Langit yang Sama")).toBeTruthy();
+  });
+
+  it("OQ_45_tanpa_q_path_api_sama_seperti_sebelumnya_dan_kolom_cari_kosong", async () => {
+    respons.set("/admin/judul?halaman=2", {
+      data: [JUDUL],
+      total: 45,
+      halaman: 2,
+      per_halaman: 20,
+    });
+    render(await DaftarJudul({ searchParams: Promise.resolve({ halaman: "2", q: "   " }) }));
+    expect(dipanggil).toEqual(["/admin/judul?halaman=2"]);
+    expect((screen.getByLabelText(/Cari judul/) as HTMLInputElement).value).toBe("");
+  });
+
+  it("OQ_45_paginasi_mempertahankan_q", async () => {
+    respons.set("/admin/judul?q=sejarah&halaman=2", {
+      data: [JUDUL],
+      total: 45,
+      halaman: 2,
+      per_halaman: 20,
+    });
+    render(await DaftarJudul({ searchParams: Promise.resolve({ q: "sejarah", halaman: "2" }) }));
+    expect(screen.getByRole("link", { name: "Berikutnya" }).getAttribute("href")).toBe(
+      "/admin/judul?q=sejarah&halaman=3",
+    );
+    expect(screen.getByRole("link", { name: "Sebelumnya" }).getAttribute("href")).toBe(
+      "/admin/judul?q=sejarah&halaman=1",
+    );
+  });
+
+  it("OQ_45_hasil_cari_kosong_judul_tidak_ditemukan_bukan_belum_ada_judul", async () => {
+    respons.set("/admin/judul?q=zzz&halaman=1", {
+      data: [],
+      total: 0,
+      halaman: 1,
+      per_halaman: 20,
+    });
+    render(await DaftarJudul({ searchParams: Promise.resolve({ q: "zzz" }) }));
+    expect(screen.getByText("Judul tidak ditemukan")).toBeTruthy();
+    expect(screen.queryByText("Belum ada judul")).toBeNull();
+  });
+
+  it("OQ_45_form_cari_GET_tanpa_halaman (pencarian baru selalu ke halaman 1)", async () => {
+    respons.set("/admin/judul?q=sejarah&halaman=3", {
+      data: [JUDUL],
+      total: 45,
+      halaman: 3,
+      per_halaman: 20,
+    });
+    render(await DaftarJudul({ searchParams: Promise.resolve({ q: "sejarah", halaman: "3" }) }));
+    const form = screen.getByRole("form", { name: "Pencarian judul" }) as HTMLFormElement;
+    expect(form.getAttribute("method")).toBe("get");
+    expect(form.getAttribute("action")).toBe("/admin/judul");
+    expect(form.querySelector('[name="halaman"]')).toBeNull();
+    expect(within(form).getByRole("link", { name: "Reset" }).getAttribute("href")).toBe(
+      "/admin/judul",
+    );
   });
 });
 

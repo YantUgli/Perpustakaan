@@ -1,30 +1,31 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Isian } from "@/components/ui/Isian";
 import { KosongState } from "@/components/ui/KosongState";
 import { Paginasi } from "@/components/ui/Paginasi";
-import { TautanTombol } from "@/components/ui/Tombol";
+import { TautanTombol, Tombol } from "@/components/ui/Tombol";
 import { ambilServer } from "@/lib/api-server";
 import type { components } from "@/lib/api-skema";
+import { filterJudulDariParam, queryJudul } from "@/lib/data-admin";
 import { formatRupiah } from "@/lib/format";
-import { halamanDariParam } from "@/lib/halaman";
 
 type HalamanJudul = components["schemas"]["HalamanJudul"];
 
 export const metadata: Metadata = { title: "Data Buku & Eksemplar" };
 
 /**
- * FR-BKU-02: daftar judul berhalaman (A–Z dari API). Tanpa pencarian dan tanpa kolom stok: backend tidak
- * punya pencarian untuk admin dan stok per judul butuh satu panggilan per baris. Eksemplar dikelola dari
- * halaman judul (tidak ada daftar eksemplar lintas judul).
+ * FR-BKU-02: daftar judul berhalaman (A–Z dari API) dengan satu kolom pencarian `q` (ASUMSI(OQ-45): aturan
+ * katalog OQ-24, dicocokkan backend). Tanpa kolom stok: stok per judul hanya di detail judul (FR-BKU-09).
+ * Eksemplar dikelola dari halaman judul (tidak ada daftar eksemplar lintas judul).
  */
 export default async function DaftarJudul({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const halaman = halamanDariParam((await searchParams).halaman);
-  const hasil = await ambilServer<HalamanJudul>(`/admin/judul?halaman=${halaman}`);
+  const filter = filterJudulDariParam(await searchParams);
+  const hasil = await ambilServer<HalamanJudul>(`/admin/judul?${queryJudul(filter)}`);
 
   return (
     <section className="flex flex-col gap-6">
@@ -36,13 +37,41 @@ export default async function DaftarJudul({
         <TautanTombol href="/admin/judul/baru">Tambah Judul</TautanTombol>
       </header>
 
+      <form
+        method="get"
+        action="/admin/judul"
+        aria-label="Pencarian judul"
+        className="grid grid-cols-1 items-end gap-4 rounded-xl border border-line bg-surface p-4 sm:grid-cols-[1fr_auto]"
+      >
+        <Isian
+          label="Cari judul"
+          name="q"
+          placeholder="Judul, penulis, ISBN, atau kategori"
+          defaultValue={filter.q ?? ""}
+          keterangan="Boleh sebagian kata; ISBN boleh dengan atau tanpa tanda hubung."
+        />
+        <div className="flex gap-2">
+          <Tombol type="submit">Cari</Tombol>
+          <TautanTombol href="/admin/judul" varian="sekunder">
+            Reset
+          </TautanTombol>
+        </div>
+      </form>
+
       <p className="angka text-sm text-navy/80">{hasil.total} judul</p>
 
       {hasil.data.length === 0 ? (
-        <KosongState
-          judul="Belum ada judul"
-          keterangan="Tambahkan judul buku, lalu tambahkan eksemplarnya."
-        />
+        filter.q ? (
+          <KosongState
+            judul="Judul tidak ditemukan"
+            keterangan="Tidak ada judul yang cocok dengan pencarian ini. Coba kata kunci lain."
+          />
+        ) : (
+          <KosongState
+            judul="Belum ada judul"
+            keterangan="Tambahkan judul buku, lalu tambahkan eksemplarnya."
+          />
+        )
       ) : (
         <div className="overflow-x-auto rounded-xl border border-line bg-surface">
           <table className="w-full min-w-[52rem] text-left text-sm">
@@ -100,10 +129,11 @@ export default async function DaftarJudul({
       )}
 
       <Paginasi
-        halaman={halaman}
+        halaman={filter.halaman}
         total={hasil.total}
         perHalaman={hasil.per_halaman}
         path="/admin/judul"
+        params={{ q: filter.q }}
       />
     </section>
   );
