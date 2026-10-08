@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.galat import GalatBisnis
 from app.core.validasi import isbn_bentuk_valid, normalisasi_isbn
 from app.models import Eksemplar, ItemTransaksi, JudulBuku, Kategori, Rak
-from app.services import berkas
+from app.services import berkas, katalog
 
 # --------------------------------------------------------------------------------------- galat
 
@@ -249,16 +249,24 @@ def _pernah_dipinjam(db: Session, judul_id: int) -> bool:
     return db.scalar(select(exists(q)))
 
 
-def daftar_judul(db: Session, *, halaman: int, per_halaman: int) -> tuple[list[JudulBuku], int]:
-    total = db.scalar(select(func.count()).select_from(JudulBuku))
-    q = (
+def daftar_judul(
+    db: Session, *, halaman: int, per_halaman: int, q: str | None = None
+) -> tuple[list[JudulBuku], int]:
+    """FR-BKU-02: daftar judul admin berhalaman, urut judul A–Z lalu id.
+
+    ASUMSI(OQ-45): `q` opsional memakai ulang aturan katalog OQ-24 (`katalog.filter_kata_kunci`);
+    tanpa `q` (atau kosong) perilaku sama dengan sebelumnya. `total` dari kondisi yang sama."""
+    kondisi = [k for k in [katalog.filter_kata_kunci(q)] if k is not None]
+    total = db.scalar(select(func.count()).select_from(JudulBuku).where(*kondisi))
+    q_data = (
         select(JudulBuku)
         .options(joinedload(JudulBuku.kategori))
+        .where(*kondisi)
         .order_by(func.lower(JudulBuku.judul), JudulBuku.id)
         .offset((halaman - 1) * per_halaman)
         .limit(per_halaman)
     )
-    return list(db.scalars(q)), total
+    return list(db.scalars(q_data)), total
 
 
 def detail_judul(db: Session, judul_id: int) -> JudulBuku:
