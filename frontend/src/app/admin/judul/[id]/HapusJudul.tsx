@@ -7,11 +7,13 @@ import { Modal } from "@/components/ui/Modal";
 import { Pesan } from "@/components/ui/Pesan";
 import { Tombol } from "@/components/ui/Tombol";
 import { ambil } from "@/lib/api-klien";
+import { URL_SETELAH_HAPUS_JUDUL } from "@/lib/data-admin";
 import { GalatApi, PESAN_SISTEM } from "@/lib/galat";
 
 /**
  * FR-BKU-02, OQ-12: hapus judul. Eksemplar judul ikut terhapus; judul yang pernah dipinjam ditolak backend,
- * dan `pesan`-nya ditampilkan apa adanya (IR-UI-04).
+ * dan `pesan`-nya ditampilkan apa adanya (IR-UI-04). Berhasil → daftar judul dengan penanda `dihapus=1`
+ * yang menampilkan "Judul berhasil dihapus." (keputusan Ayen 2026-10-07).
  */
 export function HapusJudul({ id, judul }: { id: number; judul: string }) {
   const router = useRouter();
@@ -30,7 +32,7 @@ export function HapusJudul({ id, judul }: { id: number; judul: string }) {
     try {
       await ambil(`/admin/judul/${id}`, { method: "DELETE" });
       setTerbuka(false);
-      router.push("/admin/judul");
+      router.push(URL_SETELAH_HAPUS_JUDUL);
     } catch (err) {
       setGalat(err instanceof GalatApi ? err.pesan : PESAN_SISTEM);
     } finally {

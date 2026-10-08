@@ -14,6 +14,7 @@ import {
   bodyUbahAnggota,
   filterAnggotaDariParam,
   filterJudulDariParam,
+  judulBaruDihapus,
   pesanCoverGagal,
   pesanSuksesTambah,
   pesanSuksesUbahAnggota,
@@ -55,6 +56,21 @@ describe("Daftar anggota admin (FR-AKN-10, OQ-33)", () => {
   it("FR_AKN_10_query_daftar: urutan q lalu halaman, q di-encode", () => {
     expect(queryAnggota({ q: "Budi & Ani", halaman: 2 })).toBe("q=Budi+%26+Ani&halaman=2");
     expect(queryAnggota({ halaman: 1 })).toBe("halaman=1");
+  });
+});
+
+describe("Penanda judul dihapus (FR-BKU-02, keputusan Ayen 2026-10-07)", () => {
+  it("FR_BKU_02_penanda_dihapus_hanya_string_1", () => {
+    expect(judulBaruDihapus({ dihapus: "1" })).toBe(true);
+    for (const nilai of [undefined, "", "0", "true", " 1", ["1", "1"]]) {
+      expect(judulBaruDihapus({ dihapus: nilai })).toBe(false);
+    }
+  });
+
+  it("FR_BKU_02_penanda_dihapus_tidak_masuk_filter_maupun_query_api", () => {
+    const f = filterJudulDariParam({ dihapus: "1", q: "x" });
+    expect(f).toEqual({ q: "x", halaman: 1 });
+    expect(queryJudul(f)).toBe("q=x&halaman=1");
   });
 });
 

@@ -4,10 +4,16 @@ import Link from "next/link";
 import { Isian } from "@/components/ui/Isian";
 import { KosongState } from "@/components/ui/KosongState";
 import { Paginasi } from "@/components/ui/Paginasi";
+import { Pesan } from "@/components/ui/Pesan";
 import { TautanTombol, Tombol } from "@/components/ui/Tombol";
 import { ambilServer } from "@/lib/api-server";
 import type { components } from "@/lib/api-skema";
-import { filterJudulDariParam, queryJudul } from "@/lib/data-admin";
+import {
+  PESAN_JUDUL_DIHAPUS,
+  filterJudulDariParam,
+  judulBaruDihapus,
+  queryJudul,
+} from "@/lib/data-admin";
 import { formatRupiah } from "@/lib/format";
 
 type HalamanJudul = components["schemas"]["HalamanJudul"];
@@ -18,13 +24,16 @@ export const metadata: Metadata = { title: "Data Buku & Eksemplar" };
  * FR-BKU-02: daftar judul berhalaman (A–Z dari API) dengan satu kolom pencarian `q` (ASUMSI(OQ-45): aturan
  * katalog OQ-24, dicocokkan backend). Tanpa kolom stok: stok per judul hanya di detail judul (FR-BKU-09).
  * Eksemplar dikelola dari halaman judul (tidak ada daftar eksemplar lintas judul).
+ * `?dihapus=1` (setelah hapus judul) menampilkan pesan sukses; penanda tidak ikut ke API, paginasi,
+ * maupun pencarian. Refresh/Back ke URL itu menampilkan pesan lagi (batasan yang diterima).
  */
 export default async function DaftarJudul({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const filter = filterJudulDariParam(await searchParams);
+  const param = await searchParams;
+  const filter = filterJudulDariParam(param);
   const hasil = await ambilServer<HalamanJudul>(`/admin/judul?${queryJudul(filter)}`);
 
   return (
@@ -36,6 +45,8 @@ export default async function DaftarJudul({
         </div>
         <TautanTombol href="/admin/judul/baru">Tambah Judul</TautanTombol>
       </header>
+
+      {judulBaruDihapus(param) && <Pesan jenis="sukses">{PESAN_JUDUL_DIHAPUS}</Pesan>}
 
       <form
         method="get"
