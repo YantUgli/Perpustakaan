@@ -1,31 +1,44 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { PanelHero } from "@/components/publik/PanelHero";
 import { Kartu } from "@/components/ui/Kartu";
+import { Logo } from "@/components/ui/Logo";
+import { fotoHeroBeranda } from "@/assets/foto";
 import { ambilSesiAtauTamu } from "@/lib/api-server";
 import { berandaRole } from "@/lib/sesi";
+import { KONTAINER } from "@/lib/tata-letak";
 
 import { FormMasuk } from "./FormMasuk";
 
 export const metadata: Metadata = { title: "Masuk" };
 
-/** FR-AKN-05. Pengguna yang sudah login langsung diarahkan ke dashboard role-nya. */
+/**
+ * FR-AKN-05 (hal-07). Pengguna yang sudah login langsung diarahkan ke dashboard role-nya. Mulai `lg`: foto
+ * dekoratif di kiri (`PanelHero sisi="kiri"`, foto beranda dipakai ulang; tanpa teks di atasnya, decisions §B),
+ * kartu di kanan dalam `KONTAINER` (tepi kanan sejajar header). Di bawah `lg` hanya kartu.
+ */
 export default async function HalamanMasuk() {
   const sesi = await ambilSesiAtauTamu();
   if (sesi) redirect(berandaRole(sesi.role));
 
   return (
-    <section className="mx-auto grid w-full max-w-5xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-2 lg:items-center lg:py-16">
-      <div className="hidden lg:block">
-        <p className="font-display text-5xl leading-tight italic">
-          Lebih Banyak Cerita, Lebih Luas Dunia.
-        </p>
-        <span aria-hidden="true" className="mt-6 block h-0.5 w-20 bg-gold" />
+    <section className="relative overflow-hidden">
+      <PanelHero foto={fotoHeroBeranda} sisi="kiri" />
+      <div className={`${KONTAINER} relative flex py-10 lg:justify-end lg:py-12`}>
+        <Kartu className="mx-auto w-full max-w-xl rounded-2xl! p-6 sm:p-10 lg:mx-0">
+          <div aria-hidden="true" className="mb-5 flex justify-center">
+            <Logo ukuran="besar" />
+          </div>
+          <h1 className="text-center font-display text-3xl font-bold sm:text-4xl">
+            Masuk ke Akun Anda
+          </h1>
+          <p className="mt-3 mb-8 text-center text-navy/80">
+            Jelajahi lebih banyak pengetahuan bersama Perpustakaan Naratif.
+          </p>
+          <FormMasuk />
+        </Kartu>
       </div>
-      <Kartu className="mx-auto w-full max-w-md p-6 sm:p-8">
-        <h1 className="mb-6 text-center font-display text-3xl">Masuk ke Akun Anda</h1>
-        <FormMasuk />
-      </Kartu>
     </section>
   );
 }

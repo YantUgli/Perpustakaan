@@ -9,6 +9,42 @@ const PATH = {
     </>
   ),
   panah: <path d="M5 12h14m-6-6 6 6-6 6" />,
+  /** Amplop (isian email, hal-07). */
+  amplop: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3.5 6.5 8.5 6.5 8.5-6.5" />
+    </>
+  ),
+  /** Gembok (isian password, hal-07). */
+  gembok: (
+    <>
+      <rect x="5" y="10.5" width="14" height="10" rx="2" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2" />
+    </>
+  ),
+  /** Mata (tampilkan password, hal-07). */
+  mata: (
+    <>
+      <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  /** Mata dicoret (password sedang ditampilkan). */
+  mataCoret: (
+    <>
+      <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="m3.5 3.5 17 17" />
+    </>
+  ),
+  /** Info dalam lingkaran (kotak keterangan, hal-07). */
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5.5M12 7.5v.01" />
+    </>
+  ),
   /** Varian solid (isi `currentColor`), mendekati ikon kategori hal-02. */
   bukuIsi: (
     <>

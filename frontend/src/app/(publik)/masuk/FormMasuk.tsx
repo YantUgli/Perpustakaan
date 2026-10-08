@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
 import { Isian } from "@/components/ui/Isian";
+import { Ikon } from "@/components/ui/Ikon";
 import { Pesan } from "@/components/ui/Pesan";
 import { Tombol } from "@/components/ui/Tombol";
 import { ambil } from "@/lib/api-klien";
@@ -67,40 +68,57 @@ export function FormMasuk() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         galat={galatIsian.email}
+        awalan={<Ikon nama="amplop" />}
       />
-      <div className="flex flex-col gap-1">
-        <Isian
-          label="Password"
-          name="password"
-          type={lihatPassword ? "text" : "password"}
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          galat={galatIsian.password}
-        />
-        <label className="flex items-center gap-2 self-start text-sm text-navy/80">
-          <input
-            type="checkbox"
-            checked={lihatPassword}
-            onChange={(e) => setLihatPassword(e.target.checked)}
-          />
-          Tampilkan password
-        </label>
-      </div>
-      <Tombol type="submit" disabled={proses} className="w-full">
-        {proses ? "Memproses…" : "Masuk"}
+      <Isian
+        label="Password"
+        name="password"
+        type={lihatPassword ? "text" : "password"}
+        autoComplete="current-password"
+        placeholder="Masukkan password"
+        required
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        galat={galatIsian.password}
+        awalan={<Ikon nama="gembok" />}
+        akhiran={
+          <button
+            type="button"
+            aria-label="Tampilkan password"
+            aria-pressed={lihatPassword}
+            onClick={() => setLihatPassword((v) => !v)}
+            className="flex size-11 items-center justify-center rounded-lg text-navy/70 hover:text-navy focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-navy"
+          >
+            <Ikon nama={lihatPassword ? "mataCoret" : "mata"} />
+          </button>
+        }
+      />
+      <Tombol type="submit" disabled={proses} className="mt-2 w-full">
+        {proses ? (
+          "Memproses…"
+        ) : (
+          <>
+            Masuk
+            <Ikon nama="panah" className="size-4" />
+          </>
+        )}
       </Tombol>
-      <Pesan jenis="info">
-        Setelah berhasil masuk, Anda diarahkan ke dashboard sesuai peran Anda (anggota atau admin).
-      </Pesan>
-      <p className="text-center text-sm text-navy/80">
+      {/* Keterangan statis, bukan umpan balik: tanpa role status/alert. Dua role saja (BR-02). */}
+      <div className="flex items-start gap-3 rounded-lg border border-line bg-ivory px-4 py-3 text-sm text-navy">
+        <Ikon nama="info" className="mt-0.5 size-5 shrink-0 text-gold-700" />
+        <p>
+          Setelah berhasil masuk, Anda diarahkan ke dashboard sesuai peran Anda (anggota atau
+          admin).
+        </p>
+      </div>
+      <p className="border-t border-line pt-5 text-center text-sm text-navy/80">
         Belum punya akun?{" "}
         <Link
           href="/daftar"
-          className="font-semibold text-gold-700 underline-offset-4 hover:underline"
+          className="inline-flex items-center gap-1 font-semibold text-navy underline-offset-4 hover:underline"
         >
-          Daftar sekarang
+          Daftar Sekarang
+          <Ikon nama="panah" className="size-4" />
         </Link>
       </p>
     </form>
