@@ -49,7 +49,10 @@ def _pola(teks: str) -> str:
 
 def filter_kata_kunci(q: str | None) -> ColumnElement[bool] | None:
     """FR-KTL-02. ASUMSI(OQ-24): satu frasa substring, tak peka huruf, ke judul/penulis/ISBN/
-    kategori digabung OR. Wildcard di-escape. Kata kunci kosong → tanpa filter."""
+    kategori digabung OR. Wildcard di-escape. Kata kunci kosong → tanpa filter.
+
+    Dipakai dua endpoint: katalog publik (`cari_judul`) dan daftar judul admin
+    (`koleksi.daftar_judul`, OQ-45). Mengubah aturan OQ-24 di sini berdampak ke keduanya."""
     q = (q or "").strip()
     if not q:
         return None

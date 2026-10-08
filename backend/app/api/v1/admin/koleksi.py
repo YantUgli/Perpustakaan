@@ -78,10 +78,14 @@ def hapus_rak(rak_id: int, db: DB) -> Response:
 @router.get("/judul", response_model=HalamanJudul)
 def daftar_judul(
     db: DB,
+    q: Annotated[
+        str | None, Query(description="Judul, penulis, ISBN, atau kategori (OQ-24/OQ-45)")
+    ] = None,
     halaman: Annotated[int, Query(ge=1)] = 1,
     per_halaman: Annotated[int, Query(ge=1, le=100)] = 20,
 ):
-    data, total = koleksi.daftar_judul(db, halaman=halaman, per_halaman=per_halaman)
+    """FR-BKU-02; ASUMSI(OQ-45): pencarian `q` dengan aturan katalog (OQ-24)."""
+    data, total = koleksi.daftar_judul(db, halaman=halaman, per_halaman=per_halaman, q=q)
     return HalamanJudul(
         data=[JudulKeluar.model_validate(j) for j in data],
         total=total,
