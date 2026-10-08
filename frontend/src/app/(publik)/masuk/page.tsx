@@ -23,7 +23,8 @@ export default async function HalamanMasuk() {
   if (sesi) redirect(berandaRole(sesi.role));
 
   return (
-    <section className="relative overflow-hidden">
+    // flex-1: section (dan foto absolutnya) memanjang sampai footer bila layar lebih tinggi dari kartu.
+    <section className="relative flex-1 overflow-hidden">
       <PanelHero foto={fotoHeroBeranda} sisi="kiri" />
       <div className={`${KONTAINER} relative flex py-10 lg:justify-end lg:py-12`}>
         <Kartu className="mx-auto w-full max-w-xl rounded-2xl! p-6 sm:p-10 lg:mx-0">

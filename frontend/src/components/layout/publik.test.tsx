@@ -6,11 +6,16 @@ let pathname = "/";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
   usePathname: () => pathname,
+  redirect: vi.fn(),
 }));
+// Layout publik & /masuk membaca sesi; pengunjung (null) cukup untuk menguji kerangka.
+vi.mock("@/lib/api-server", () => ({ ambilSesiAtauTamu: async () => null }));
 
 const { HeaderPublik } = await import("./HeaderPublik");
 const { FooterPublik } = await import("./FooterPublik");
 const { bagianTentang } = await import("@/lib/info-perpustakaan");
+const { default: LayoutPublik } = await import("@/app/(publik)/layout");
+const { default: HalamanMasuk } = await import("@/app/(publik)/masuk/page");
 
 afterEach(cleanup);
 
@@ -65,5 +70,19 @@ describe("FooterPublik (hal-02, D6)", () => {
     for (const t of harapan) expect(within(kontak).getByText(t)).toBeTruthy();
     // Tanpa "Bantuan" dan media sosial (halaman tidak ada, SRS tidak memuatnya).
     expect(screen.queryByText(/bantuan|instagram|youtube|facebook/i)).toBeNull();
+  });
+});
+
+describe("Kerangka layout publik (chore/layout-publik-footer, 08/10/2026)", () => {
+  it("main_flex_kolom_mengisi_sisa_tinggi_dan_section_masuk_memanjang", async () => {
+    // <main> flex kolom: anak halaman dapat memanjang sampai footer (tanpa pita ivory di bawah foto /masuk).
+    render(await LayoutPublik({ children: await HalamanMasuk() }));
+    const main = screen.getByRole("main");
+    expect(main.className.split(" ")).toEqual(
+      expect.arrayContaining(["flex", "flex-1", "flex-col"]),
+    );
+    const section = main.firstElementChild as HTMLElement;
+    expect(section.tagName).toBe("SECTION");
+    expect(section.className.split(" ")).toContain("flex-1");
   });
 });
