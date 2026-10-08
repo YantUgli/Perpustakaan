@@ -44,6 +44,18 @@ export function filterJudulDariParam(p: Record<string, Param>): FilterJudul {
   return f;
 }
 
+/** FR-BKU-02 (keputusan Ayen 2026-10-07): pesan setelah hapus judul; judul tidak ditaruh di URL. */
+export const PESAN_JUDUL_DIHAPUS = "Judul berhasil dihapus.";
+export const URL_SETELAH_HAPUS_JUDUL = "/admin/judul?dihapus=1";
+
+/**
+ * Penanda `dihapus` sah hanya string "1" persis; nilai lain diabaikan tanpa galat. Sengaja di luar
+ * `FilterJudul`, sehingga tidak dikirim ke API dan tidak terbawa ke paginasi maupun pencarian.
+ */
+export function judulBaruDihapus(p: Record<string, Param>): boolean {
+  return p.dihapus === "1";
+}
+
 /** Query string untuk `GET /admin/judul` (urutan tetap: q, halaman); tanpa q sama seperti sebelumnya. */
 export function queryJudul(f: FilterJudul): string {
   const q = new URLSearchParams();

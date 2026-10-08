@@ -147,6 +147,47 @@ describe("Daftar judul (FR-BKU-02)", () => {
     expect(screen.queryByText("Judul tidak ditemukan")).toBeNull();
   });
 
+  it("FR_BKU_02_daftar_dengan_penanda_dihapus_tampil_pesan_sukses", async () => {
+    respons.set("/admin/judul?halaman=1", { data: [JUDUL], total: 1, halaman: 1, per_halaman: 20 });
+    render(await DaftarJudul({ searchParams: Promise.resolve({ dihapus: "1" }) }));
+    expect(screen.getByRole("status").textContent).toBe("Judul berhasil dihapus.");
+    expect(dipanggil).toEqual(["/admin/judul?halaman=1"]); // penanda tidak dikirim ke API
+  });
+
+  it("FR_BKU_02_daftar_tanpa_penanda_tidak_tampil_pesan", async () => {
+    respons.set("/admin/judul?halaman=1", { data: [JUDUL], total: 1, halaman: 1, per_halaman: 20 });
+    render(await DaftarJudul({ searchParams: Promise.resolve({}) }));
+    expect(screen.queryByText("Judul berhasil dihapus.")).toBeNull();
+  });
+
+  it("FR_BKU_02_penanda_tak_sah_tidak_tampil_pesan", async () => {
+    respons.set("/admin/judul?halaman=1", { data: [JUDUL], total: 1, halaman: 1, per_halaman: 20 });
+    for (const dihapus of ["0", "true", ["1", "1"]]) {
+      render(await DaftarJudul({ searchParams: Promise.resolve({ dihapus }) }));
+      expect(screen.queryByText("Judul berhasil dihapus.")).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("FR_BKU_02_penanda_dihapus_tidak_terbawa_ke_paginasi_dan_pencarian", async () => {
+    respons.set("/admin/judul?q=sejarah&halaman=1", {
+      data: [JUDUL],
+      total: 45,
+      halaman: 1,
+      per_halaman: 20,
+    });
+    const { container } = render(
+      await DaftarJudul({ searchParams: Promise.resolve({ dihapus: "1", q: "sejarah" }) }),
+    );
+    expect(screen.getByText("Judul berhasil dihapus.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Berikutnya" }).getAttribute("href")).toBe(
+      "/admin/judul?q=sejarah&halaman=2",
+    );
+    const form = screen.getByRole("form", { name: "Pencarian judul" });
+    expect(form.querySelector('[name="dihapus"]')).toBeNull();
+    expect(container.querySelector('a[href*="dihapus"]')).toBeNull();
+  });
+
   it("OQ_45_q_dikirim_ke_api_di_encode_dan_kolom_cari_terisi", async () => {
     respons.set("/admin/judul?q=Bumi+%26+Laut&halaman=1", {
       data: [JUDUL],
@@ -493,13 +534,15 @@ describe("Hapus judul (FR-BKU-02, OQ-12)", () => {
     expect(router.push).not.toHaveBeenCalled();
   });
 
-  it("FR_BKU_02_hapus_berhasil_204_kembali_ke_daftar", async () => {
+  it("FR_BKU_02_hapus_berhasil_204_kembali_ke_daftar_dengan_penanda", async () => {
     fetchPalsu.mockResolvedValue(new Response(null, { status: 204 }));
     render(<HapusJudul id={7} judul="Langit yang Sama" />);
     fireEvent.click(screen.getByRole("button", { name: "Hapus Judul" }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Ya, Hapus" }));
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/admin/judul"));
+    // Keputusan Ayen 2026-10-07: cukup penanda; judul tidak ditaruh di URL.
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/admin/judul?dihapus=1"));
+    expect(String(router.push.mock.calls[0][0])).not.toMatch(/Langit/);
   });
 });
 
