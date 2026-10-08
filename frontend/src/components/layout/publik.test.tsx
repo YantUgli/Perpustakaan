@@ -73,6 +73,28 @@ describe("FooterPublik (hal-02, D6)", () => {
   });
 });
 
+describe("Menu header publik di layar sempit (chore/header-publik-mobile, 08/10/2026)", () => {
+  it("menu_membungkus_tanpa_gulir_label_utuh_aria_current_tetap", () => {
+    pathname = "/tentang";
+    render(<HeaderPublik sesi={null} />);
+    const menu = screen.getByRole("navigation", { name: "Menu utama" });
+    const daftar = within(menu).getByRole("list");
+    const kelas = daftar.className.split(" ");
+    // Membungkus ke baris berikutnya bila tidak muat (320 px), bukan disembunyikan di area gulir.
+    expect(kelas).toContain("flex-wrap");
+    expect(kelas).not.toContain("overflow-x-auto");
+    const tautan = within(menu).getAllByRole("link");
+    expect(tautan.map((t) => t.textContent)).toEqual([
+      "Beranda",
+      "Katalog Buku",
+      "Tentang Perpustakaan",
+    ]);
+    // Satu label tidak dipecah di tengah: yang membungkus adalah item, bukan teksnya.
+    for (const t of tautan) expect(t.className.split(" ")).toContain("whitespace-nowrap");
+    expect(tautan.map((t) => t.getAttribute("aria-current"))).toEqual([null, null, "page"]);
+  });
+});
+
 describe("Kerangka layout publik (chore/layout-publik-footer, 08/10/2026)", () => {
   it("main_flex_kolom_mengisi_sisa_tinggi_dan_section_masuk_memanjang", async () => {
     // <main> flex kolom: anak halaman dapat memanjang sampai footer (tanpa pita ivory di bawah foto /masuk).
