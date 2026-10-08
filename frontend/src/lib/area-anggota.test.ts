@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { JUDUL_ALASAN_UMUM, judulAlasan, pinjamanTerdekat, teksSisaHari } from "./area-anggota";
+import {
+  JUDUL_ALASAN_UMUM,
+  PER_HALAMAN_TAGIHAN,
+  hitungTagihanAktif,
+  judulAlasan,
+  pinjamanTerdekat,
+  teksSisaHari,
+} from "./area-anggota";
 import { halamanDariParam, jumlahHalaman } from "./halaman";
 
 describe("teksSisaHari (FR-AGT-02, OQ-34) — hanya dari field API", () => {
@@ -69,5 +76,56 @@ describe("halamanDariParam & jumlahHalaman (FR-AGT-03/04 berhalaman)", () => {
     [41, 20, 3],
   ])("jumlah_halaman total=%d per=%d → %d", (total, per, hasil) => {
     expect(jumlahHalaman(total, per)).toBe(hasil);
+  });
+});
+
+describe("hitungTagihanAktif (FR-AGT-04, D1 08/10/2026: hanya tampilan)", () => {
+  type Status = "BELUM_LUNAS" | "LUNAS";
+  /** Server palsu: `total` tagihan, status bergantian sesuai `pola`, berhalaman seperti backend. */
+  function serverPalsu(total: number, pola: (i: number) => Status) {
+    const semua = Array.from({ length: total }, (_, i) => ({ id: i + 1, status: pola(i) }));
+    return vi.fn(async (path: string) => {
+      const q = new URLSearchParams(path.split("?")[1]);
+      const halaman = Number(q.get("halaman"));
+      const per = Number(q.get("per_halaman"));
+      return {
+        data: semua.slice((halaman - 1) * per, halaman * per),
+        total,
+        halaman,
+        per_halaman: per,
+      };
+    });
+  }
+
+  it("per halaman 100 (batas backend)", () => {
+    expect(PER_HALAMAN_TAGIHAN).toBe(100);
+  });
+
+  it.each([
+    [0, 1],
+    [1, 1],
+    [100, 1],
+    [101, 2],
+    [250, 3],
+  ])("FR_AGT_04_total_%i_mengambil_%i_halaman_saja", async (total, jumlahPanggilan) => {
+    const ambil = serverPalsu(total, () => "BELUM_LUNAS");
+    expect(await hitungTagihanAktif(ambil)).toBe(total);
+    expect(ambil).toHaveBeenCalledTimes(jumlahPanggilan);
+    expect(ambil.mock.calls.map(([p]) => p)).toEqual(
+      Array.from(
+        { length: jumlahPanggilan },
+        (_, i) => `/anggota/tagihan?halaman=${i + 1}&per_halaman=100`,
+      ),
+    );
+  });
+
+  it("FR_AGT_04_hanya_BELUM_LUNAS_yang_dihitung_lintas_halaman", async () => {
+    // 150 tagihan: indeks genap Belum Lunas (75), ganjil Lunas.
+    const ambil = serverPalsu(150, (i) => (i % 2 === 0 ? "BELUM_LUNAS" : "LUNAS"));
+    expect(await hitungTagihanAktif(ambil)).toBe(75);
+  });
+
+  it("semua Lunas → 0", async () => {
+    expect(await hitungTagihanAktif(serverPalsu(3, () => "LUNAS"))).toBe(0);
   });
 });
