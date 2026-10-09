@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   JUDUL_ALASAN_UMUM,
   PER_HALAMAN_TAGIHAN,
-  hitungTagihanAktif,
   judulAlasan,
   pinjamanTerdekat,
+  tagihanAktif,
   teksSisaHari,
 } from "./area-anggota";
 import { halamanDariParam, jumlahHalaman } from "./halaman";
@@ -79,7 +79,7 @@ describe("halamanDariParam & jumlahHalaman (FR-AGT-03/04 berhalaman)", () => {
   });
 });
 
-describe("hitungTagihanAktif (FR-AGT-04, D1 08/10/2026: hanya tampilan)", () => {
+describe("tagihanAktif (FR-AGT-04, D1 08/10/2026: hanya tampilan)", () => {
   type Status = "BELUM_LUNAS" | "LUNAS";
   /** Server palsu: `total` tagihan, status bergantian sesuai `pola`, berhalaman seperti backend. */
   function serverPalsu(total: number, pola: (i: number) => Status) {
@@ -109,7 +109,7 @@ describe("hitungTagihanAktif (FR-AGT-04, D1 08/10/2026: hanya tampilan)", () => 
     [250, 3],
   ])("FR_AGT_04_total_%i_mengambil_%i_halaman_saja", async (total, jumlahPanggilan) => {
     const ambil = serverPalsu(total, () => "BELUM_LUNAS");
-    expect(await hitungTagihanAktif(ambil)).toBe(total);
+    expect((await tagihanAktif(ambil)).length).toBe(total);
     expect(ambil).toHaveBeenCalledTimes(jumlahPanggilan);
     expect(ambil.mock.calls.map(([p]) => p)).toEqual(
       Array.from(
@@ -122,10 +122,20 @@ describe("hitungTagihanAktif (FR-AGT-04, D1 08/10/2026: hanya tampilan)", () => 
   it("FR_AGT_04_hanya_BELUM_LUNAS_yang_dihitung_lintas_halaman", async () => {
     // 150 tagihan: indeks genap Belum Lunas (75), ganjil Lunas.
     const ambil = serverPalsu(150, (i) => (i % 2 === 0 ? "BELUM_LUNAS" : "LUNAS"));
-    expect(await hitungTagihanAktif(ambil)).toBe(75);
+    const hasil = await tagihanAktif(ambil);
+    expect(hasil).toHaveLength(75);
+    // Daftar utuh (bukan hanya hitungan), urutan API dipertahankan lintas halaman.
+    expect(hasil.every((t) => t.status === "BELUM_LUNAS")).toBe(true);
+    expect(hasil.map((t) => t.id).slice(0, 3)).toEqual([1, 3, 5]);
+    expect(hasil.at(-1)?.id).toBe(149);
+  });
+
+  it("galat_diteruskan_tidak_ditelan", async () => {
+    const galat = new Error("gagal");
+    await expect(tagihanAktif(vi.fn().mockRejectedValue(galat))).rejects.toBe(galat);
   });
 
   it("semua Lunas → 0", async () => {
-    expect(await hitungTagihanAktif(serverPalsu(3, () => "LUNAS"))).toBe(0);
+    expect(await tagihanAktif(serverPalsu(3, () => "LUNAS"))).toEqual([]);
   });
 });

@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-
-import { Ikon } from "@/components/ui/Ikon";
 import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { TautanTombol } from "@/components/ui/Tombol";
 import { fotoHeroBeranda } from "@/assets/foto";
 import { ambilServer, ambilSesiServer } from "@/lib/api-server";
 import type { components } from "@/lib/api-skema";
-import { hitungTagihanAktif, pinjamanTerdekat, teksSisaHari } from "@/lib/area-anggota";
+import { pinjamanTerdekat, tagihanAktif, teksSisaHari } from "@/lib/area-anggota";
 import { formatTanggal } from "@/lib/format";
 
 import { BannerKelayakan } from "./_komponen/BannerKelayakan";
-import { KartuPinjaman } from "./_komponen/KartuPinjaman";
+import { BarisPinjamanTerdekat } from "./_komponen/BarisPinjamanTerdekat";
 import { KartuRingkas } from "./_komponen/KartuRingkas";
+import { PanelDashboard } from "./_komponen/PanelDashboard";
+import { PanelRiwayatTerbaru } from "./_komponen/PanelRiwayatTerbaru";
+import { PanelTagihanAktif } from "./_komponen/PanelTagihanAktif";
 
 type Kelayakan = components["schemas"]["KelayakanKeluar"];
 type Pinjaman = components["schemas"]["PinjamanAktifKeluar"];
@@ -26,15 +26,17 @@ export const metadata: Metadata = { title: "Dashboard Anggota" };
  * Dashboard anggota (hal-09, spec `design/specs/dashboard-anggota.md`): status kelayakan + alasannya (FR-AGT-05),
  * kartu ringkas pinjaman, jatuh tempo terdekat, tagihan aktif, dan riwayat (FR-AGT-02..04).
  * Kartu "Tagihan Aktif" ditampilkan sejak D1 (Ayen 08/10/2026, menggantikan keputusan P2): angkanya hanya tampilan;
- * banner kelayakan tetap dari `/anggota/kelayakan`.
+ * banner kelayakan tetap dari `/anggota/kelayakan`. Panel (keputusan Ayen 09/10/2026): Pinjaman Terdekat Jatuh Tempo
+ * (FR-AGT-02), Tagihan Aktif (FR-AGT-04, daftar dari permintaan yang sama dengan kartu), dan Riwayat Terbaru
+ * (cuplikan FR-AGT-03, halaman 1 `per_halaman=3`; `total`-nya juga mengisi kartu Riwayat Peminjaman).
  */
 export default async function DashboardAnggota() {
-  const [sesi, kelayakan, pinjaman, riwayat, tagihanAktif] = await Promise.all([
+  const [sesi, kelayakan, pinjaman, riwayat, tagihan] = await Promise.all([
     ambilSesiServer(),
     ambilServer<Kelayakan>("/anggota/kelayakan"),
     ambilServer<Pinjaman[]>("/anggota/pinjaman"),
-    ambilServer<HalamanRiwayat>("/anggota/riwayat?per_halaman=1"),
-    hitungTagihanAktif((path) => ambilServer<HalamanTagihan>(path)),
+    ambilServer<HalamanRiwayat>("/anggota/riwayat?halaman=1&per_halaman=3"),
+    tagihanAktif((path) => ambilServer<HalamanTagihan>(path)),
   ]);
   const terdekat = pinjamanTerdekat(pinjaman);
   // Backend mengurutkan pinjaman menurut jatuh tempo lalu id: yang pertama = terdekat.
@@ -86,7 +88,7 @@ export default async function DashboardAnggota() {
           label="Tagihan Aktif"
           ikon="strukIsi"
           nada="merah"
-          nilai={tagihanAktif}
+          nilai={tagihan.length}
           satuan="tagihan"
         />
         <KartuRingkas
@@ -99,33 +101,33 @@ export default async function DashboardAnggota() {
         />
       </div>
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between gap-4">
-          <h2 className="font-display text-2xl">Pinjaman Terdekat Jatuh Tempo</h2>
-          {terdekat.length > 0 && (
-            <Link
-              href="/anggota/pinjaman"
-              className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-gold-700"
-            >
-              Lihat Semua
-              <Ikon nama="panah" className="size-4" />
-            </Link>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
+        <PanelDashboard
+          id="judul-pinjaman-terdekat"
+          judul="Pinjaman Terdekat Jatuh Tempo"
+          subjudul="Buku yang sedang Anda pinjam, diurutkan dari jatuh tempo terdekat."
+          lihatSemua={terdekat.length > 0 ? "/anggota/pinjaman" : undefined}
+        >
+          {terdekat.length === 0 ? (
+            <KosongState
+              judul="Belum ada pinjaman aktif"
+              keterangan="Buku yang Anda pinjam akan tampil di sini beserta jatuh temponya."
+              aksi={<TautanTombol href="/katalog">Lihat Katalog Buku</TautanTombol>}
+            />
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {terdekat.map((p) => (
+                <BarisPinjamanTerdekat key={p.kode_eksemplar} p={p} />
+              ))}
+            </ul>
           )}
+        </PanelDashboard>
+
+        <div className="flex min-w-0 flex-col gap-6">
+          <PanelTagihanAktif tagihan={tagihan} />
+          <PanelRiwayatTerbaru riwayat={riwayat.data} />
         </div>
-        {terdekat.length === 0 ? (
-          <KosongState
-            judul="Belum ada pinjaman aktif"
-            keterangan="Buku yang Anda pinjam akan tampil di sini beserta jatuh temponya."
-            aksi={<TautanTombol href="/katalog">Lihat Katalog Buku</TautanTombol>}
-          />
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {terdekat.map((p) => (
-              <KartuPinjaman key={p.kode_eksemplar} p={p} />
-            ))}
-          </ul>
-        )}
-      </section>
+      </div>
     </section>
   );
 }

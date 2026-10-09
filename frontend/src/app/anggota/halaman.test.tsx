@@ -55,10 +55,23 @@ const halaman = (data: unknown[], total = data.length) => ({
   per_halaman: 20,
 });
 
+/** Riwayat dashboard: satu permintaan halaman 1 `per_halaman=3`; `total`-nya mengisi kartu Riwayat Peminjaman. */
+const RIWAYAT_DASHBOARD = "/anggota/riwayat?halaman=1&per_halaman=3";
+
 /** Tagihan dashboard (D1): satu halaman `per_halaman=100` berisi status yang diberikan. */
 function aturTagihan(status: string[]) {
   respons.set("/anggota/tagihan?halaman=1&per_halaman=100", {
-    data: status.map((s, i) => ({ id: i + 1, status: s })),
+    data: status.map((s, i) => ({
+      id: i + 1,
+      status: s,
+      jenis: i % 2 === 0 ? "DENDA" : "PENGGANTIAN",
+      nominal: 10000 * (i + 1),
+      cara_penyelesaian: null,
+      tanggal_dibentuk: `2026-10-0${i + 1}`,
+      tanggal_penyelesaian: null,
+      kode_eksemplar: `EKS-00010${i}`,
+      judul: `Tagihan Buku ${i + 1}`,
+    })),
     total: status.length,
     halaman: 1,
     per_halaman: 100,
@@ -80,7 +93,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
   it("FR_AGT_05_layak", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", []);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 12));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 12));
     aturTagihan([]);
     render(await Dashboard());
     expect(screen.getByText("Anda dapat meminjam buku")).toBeTruthy();
@@ -91,7 +104,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
   it("FR_AGT_05_layak_tombol_lihat_katalog_ke_katalog", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", []);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
     aturTagihan([]);
     render(await Dashboard());
     const banner = screen.getByRole("status");
@@ -103,7 +116,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
     // Angka kartu hanya tampilan; kelayakan selalu dari /anggota/kelayakan.
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", []);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
     aturTagihan(["BELUM_LUNAS", "BELUM_LUNAS", "LUNAS"]);
     render(await Dashboard());
     expect(screen.getByText("Anda dapat meminjam buku")).toBeTruthy();
@@ -114,7 +127,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
   it("FR_AGT_04_kartu_tagihan_aktif_ke_halaman_tagihan", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", []);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
     aturTagihan(["LUNAS"]);
     render(await Dashboard());
     const k = kartu("Tagihan Aktif");
@@ -126,7 +139,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
   it("FR_AGT_02_kartu_pinjaman_aktif_dan_riwayat_bertaut", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", PINJAMAN);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 7));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 7));
     aturTagihan([]);
     render(await Dashboard());
     expect(kartu("Jumlah Pinjaman Aktif").getAttribute("href")).toBe("/anggota/pinjaman");
@@ -137,7 +150,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
   it("FR_AGT_02_kartu_jatuh_tempo_terdekat_normal", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", [PINJAMAN[1]]);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 1));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 1));
     aturTagihan([]);
     render(await Dashboard());
     const k = kartu("Jatuh Tempo Terdekat");
@@ -150,7 +163,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
   it("FR_AGT_02_kartu_jatuh_tempo_terdekat_terlambat_dari_field", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", PINJAMAN);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 2));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 2));
     aturTagihan([]);
     render(await Dashboard());
     const k = kartu("Jatuh Tempo Terdekat");
@@ -161,7 +174,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
   it("FR_AGT_02_kartu_jatuh_tempo_terdekat_tanpa_pinjaman", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", []);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
     aturTagihan([]);
     render(await Dashboard());
     const k = kartu("Jatuh Tempo Terdekat");
@@ -172,7 +185,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
   it("sapaan_dengan_nama_dan_subjudul", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", []);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
     aturTagihan([]);
     render(await Dashboard());
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
@@ -186,12 +199,15 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
   it("lihat_semua_pinjaman_ke_halaman_pinjaman", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", PINJAMAN);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 2));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 2));
     aturTagihan([]);
     render(await Dashboard());
-    expect(screen.getByRole("link", { name: /Lihat Semua/ }).getAttribute("href")).toBe(
-      "/anggota/pinjaman",
-    );
+    const panel = screen.getByRole("region", { name: "Pinjaman Terdekat Jatuh Tempo" });
+    expect(
+      within(panel)
+        .getByRole("link", { name: /Lihat Semua/ })
+        .getAttribute("href"),
+    ).toBe("/anggota/pinjaman");
   });
 
   it("FR_AGT_05_terblokir_alasan_pesan_apa_adanya (judul 'Anda …' dari kode)", async () => {
@@ -206,7 +222,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
       ],
     });
     respons.set("/anggota/pinjaman", PINJAMAN);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 3));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 3));
     aturTagihan(["BELUM_LUNAS", "BELUM_LUNAS"]);
     render(await Dashboard());
     expect(screen.getByText("Anda belum dapat meminjam buku")).toBeTruthy();
@@ -226,7 +242,7 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
       judul: `Buku ${h}`,
     }));
     respons.set("/anggota/pinjaman", empat);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
     aturTagihan([]);
     render(await Dashboard());
     expect(screen.getAllByText(/^Buku [A-D]$/).map((e) => e.textContent)).toEqual([
@@ -234,6 +250,183 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
       "Buku B",
       "Buku C",
     ]);
+  });
+
+  it("FR_AGT_02_pinjaman_terdekat_maks_3_pil_sisa_hari_dua_nada", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    const hariIni = {
+      ...PINJAMAN[1],
+      kode_eksemplar: "EKS-000003",
+      judul: "Hari Ini",
+      sisa_hari: 0,
+    };
+    const keempat = { ...PINJAMAN[1], kode_eksemplar: "EKS-000004", judul: "Keempat" };
+    respons.set("/anggota/pinjaman", [...PINJAMAN, hariIni, keempat]);
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
+    aturTagihan([]);
+    render(await Dashboard());
+    const panel = screen.getByRole("region", { name: "Pinjaman Terdekat Jatuh Tempo" });
+    expect(within(panel).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(panel).queryByText("Keempat")).toBeNull();
+    expect(within(panel).getByText("EKS-000001")).toBeTruthy();
+    expect(within(panel).getByText("01/10/2026")).toBeTruthy();
+    // Keputusan 1: terlambat = nada Terlambat; selain itu (termasuk hari ini) = nada Dipinjam.
+    const pil = (teks: string) => within(panel).getByText(teks);
+    expect(pil("Terlambat 4 hari").getAttribute("data-nada")).toBe("terlambat");
+    expect(pil("Terlambat 4 hari").className).toContain("text-status-terlambat");
+    expect(pil("5 hari lagi").getAttribute("data-nada")).toBe("normal");
+    expect(pil("5 hari lagi").className).toContain("text-status-dipinjam");
+    expect(pil("Jatuh tempo hari ini").getAttribute("data-nada")).toBe("normal");
+  });
+
+  it("FR_AGT_04_panel_tagihan_aktif_maks_3_hanya_belum_lunas", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
+    aturTagihan(["BELUM_LUNAS", "LUNAS", "BELUM_LUNAS", "BELUM_LUNAS", "BELUM_LUNAS"]);
+    render(await Dashboard());
+    const panel = screen.getByRole("region", { name: "Tagihan Aktif" });
+    const baris = within(panel).getAllByRole("listitem");
+    // Urutan API dipertahankan; Lunas (indeks 1) dibuang; maks 3.
+    expect(baris.map((b) => within(b).getByText(/^Tagihan Buku/).textContent)).toEqual([
+      "Tagihan Buku 1",
+      "Tagihan Buku 3",
+      "Tagihan Buku 4",
+    ]);
+    expect(baris[0].textContent).toContain("Denda");
+    expect(baris[0].textContent).toContain("01/10/2026");
+    expect(baris[0].textContent).toContain("Rp10.000");
+    expect(baris[2].textContent).toContain("Penggantian");
+    expect(kartu("Tagihan Aktif").textContent).toContain("4");
+    expect(
+      within(panel)
+        .getByRole("link", { name: /Lihat Semua/ })
+        .getAttribute("href"),
+    ).toBe("/anggota/tagihan");
+    // Hanya informasi: tanpa tombol/tautan bayar.
+    expect(within(panel).queryByRole("button")).toBeNull();
+    expect(within(panel).queryByText(/bayar/i)).toBeNull();
+    expect(within(panel).getAllByRole("link")).toHaveLength(1);
+  });
+
+  it("FR_AGT_04_panel_tagihan_kosong", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
+    aturTagihan(["LUNAS"]);
+    render(await Dashboard());
+    const panel = screen.getByRole("region", { name: "Tagihan Aktif" });
+    expect(within(panel).getByText("Tidak ada tagihan")).toBeTruthy();
+    expect(within(panel).getByText("Tidak ada tagihan yang belum lunas.")).toBeTruthy();
+    expect(panel.textContent).not.toMatch(/kondisi baik/);
+    // hal-09: ikon struk berlencana centang (bukan centang saja), dekoratif.
+    const ikon = panel.querySelector('[data-ikon-kosong="struk-centang"]')!;
+    expect(ikon.getAttribute("aria-hidden")).toBe("true");
+    expect(
+      Array.from(ikon.querySelectorAll("svg[data-ikon]")).map((e) => e.getAttribute("data-ikon")),
+    ).toEqual(["struk", "centang"]);
+  });
+
+  it("FR_AGT_03_riwayat_terbaru_maks_3_satu_permintaan", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    const item = (i: number) => ({
+      kode_eksemplar: `EKS-00020${i}`,
+      judul: `Riwayat ${i}`,
+      tanggal_pinjam: "2026-09-0" + i,
+      jatuh_tempo: "2026-10-0" + i,
+      tanggal_kembali: "2026-09-2" + i,
+      status: "DIKEMBALIKAN",
+      terlambat: false,
+      tanggal_kejadian: null,
+    });
+    respons.set(RIWAYAT_DASHBOARD, halaman([item(3), item(2), item(1)], 9));
+    aturTagihan([]);
+    render(await Dashboard());
+    expect(dipanggil.filter((p) => p.startsWith("/anggota/riwayat"))).toEqual([RIWAYAT_DASHBOARD]);
+    const panel = screen.getByRole("region", { name: "Riwayat Terbaru" });
+    expect(
+      within(panel)
+        .getAllByRole("listitem")
+        .map((l) => l.textContent),
+    ).toEqual([
+      expect.stringContaining("Riwayat 3"),
+      expect.stringContaining("Riwayat 2"),
+      expect.stringContaining("Riwayat 1"),
+    ]);
+    expect(
+      within(panel)
+        .getByRole("link", { name: /Lihat Semua/ })
+        .getAttribute("href"),
+    ).toBe("/anggota/riwayat");
+    // `total` respons yang sama mengisi kartu Riwayat Peminjaman.
+    expect(kartu("Riwayat Peminjaman").textContent).toContain("9");
+  });
+
+  it("FR_AGT_03_riwayat_terbaru_label_terlambat_dan_tanggal_kembali_kejadian", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    const dasar = {
+      jatuh_tempo: "2026-10-01",
+      terlambat: false,
+      tanggal_kembali: null,
+      tanggal_kejadian: null,
+    };
+    respons.set(
+      RIWAYAT_DASHBOARD,
+      halaman([
+        {
+          ...dasar,
+          kode_eksemplar: "EKS-1",
+          judul: "Masih Dipinjam",
+          tanggal_pinjam: "2026-09-01",
+          status: "DIPINJAM",
+          terlambat: true,
+        },
+        {
+          ...dasar,
+          kode_eksemplar: "EKS-2",
+          judul: "Sudah Kembali",
+          tanggal_pinjam: "2026-08-01",
+          status: "DIKEMBALIKAN",
+          tanggal_kembali: "2026-08-20",
+        },
+        {
+          ...dasar,
+          kode_eksemplar: "EKS-3",
+          judul: "Hilang",
+          tanggal_pinjam: "2026-07-01",
+          status: "HILANG",
+          tanggal_kejadian: "2026-07-15",
+        },
+      ]),
+    );
+    aturTagihan([]);
+    render(await Dashboard());
+    const panel = screen.getByRole("region", { name: "Riwayat Terbaru" });
+    const [a, b, c] = within(panel).getAllByRole("listitem");
+    // IR-UI-03: Terlambat dari field `terlambat`, bukan status tersimpan.
+    expect(within(a).getByText("Terlambat")).toBeTruthy();
+    expect(a.textContent).toContain("Dipinjam 01/09/2026");
+    expect(a.textContent).not.toMatch(/Kembali|Kejadian/);
+    expect(within(b).getByText("Dikembalikan")).toBeTruthy();
+    expect(b.textContent).toContain("Dipinjam 01/08/2026");
+    expect(b.textContent).toContain("Kembali 20/08/2026");
+    expect(within(c).getAllByText("Hilang").length).toBeGreaterThan(0);
+    expect(c.textContent).toContain("Kejadian 15/07/2026");
+    // Hanya tanggal, tanpa jam.
+    expect(panel.textContent).not.toMatch(/\d{1,2}[:.]\d{2}(?!\/)/);
+  });
+
+  it("FR_AGT_03_riwayat_terbaru_kosong", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
+    aturTagihan([]);
+    render(await Dashboard());
+    const panel = screen.getByRole("region", { name: "Riwayat Terbaru" });
+    expect(within(panel).getByText("Belum ada riwayat peminjaman.")).toBeTruthy();
+    expect(within(panel).queryByRole("listitem")).toBeNull();
   });
 });
 
@@ -432,7 +625,7 @@ describe("Kepala halaman area (decisions §B Kepala halaman area)", () => {
   it("IR_UI_03_menu_utama_anggota_berfoto_hero_beranda_judul_tetap", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", []);
-    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
     respons.set("/anggota/riwayat?halaman=1", halaman([], 0));
     respons.set("/anggota/tagihan?halaman=1", halaman([], 0));
     respons.set("/anggota/qr", { kode: "AGT-000123", nama: "Aulia Rahma", isi_qr: "AGT-000123" });
