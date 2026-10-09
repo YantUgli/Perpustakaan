@@ -392,6 +392,15 @@ const PATH = {
   centang: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   /** Tanda seru (banner kelayakan: belum dapat meminjam). */
   seru: <path d="M12 5.5v8m0 4.5v.01" />,
+  /** Gedung berpilar garis (Penerbit, detail buku hal-05). */
+  gedung: <path d="M3 9.5 12 4l9 5.5ZM5 9.5v9m4.67-9v9m4.66-9v9M19 9.5v9M3 20.5h18" />,
+  /** Tumpukan koin garis (Harga, detail buku hal-05). */
+  koin: (
+    <>
+      <ellipse cx="12" cy="6" rx="7" ry="2.5" />
+      <path d="M5 6v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 10v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4M5 14v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type NamaIkon = keyof typeof PATH;

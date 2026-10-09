@@ -74,6 +74,7 @@ const JUDUL = {
   kategori: { id: 3, nama: "Sejarah" },
   harga: 98000,
   cover_path: "cover/abc.png",
+  deskripsi: null,
   cover_url: "/api/v1/katalog/judul/7/cover",
 };
 const TANPA_COVER = {
