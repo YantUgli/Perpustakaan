@@ -298,7 +298,8 @@ def test_NFR_SEC_06_foto_sah_tidak_disimpan_bila_isian_lain_salah_atau_duplikat(
 
 
 def test_NFR_SEC_06_OQ_42_foto_anggota_hanya_lewat_route_pemilik_dan_admin():
-    """Sebelum OQ-42 foto tidak disajikan; kini hanya untuk pemilik & admin, tidak publik."""
+    """Sebelum OQ-42 foto tidak disajikan; kini hanya untuk pemilik & admin, tidak publik.
+    OQ-48: hanya anggota yang dapat mengganti fotonya sendiri."""
     from tests.test_autentikasi import ROUTE_PUBLIK, _route_aplikasi_sungguhan
 
     route_foto = {
@@ -309,7 +310,8 @@ def test_NFR_SEC_06_OQ_42_foto_anggota_hanya_lewat_route_pemilik_dan_admin():
     }
     assert route_foto == {
         ("GET", "/api/v1/anggota/profil/foto"),  # router_anggota, identitas dari sesi
-        ("GET", "/api/v1/admin/anggota/{kode}/foto"),  # router_admin
+        ("PUT", "/api/v1/anggota/profil/foto"),  # OQ-48: anggota mengganti foto sendiri
+        ("GET", "/api/v1/admin/anggota/{kode}/foto"),  # router_admin, hanya baca (FR-AKN-11)
     }
     assert not route_foto & ROUTE_PUBLIK
 
