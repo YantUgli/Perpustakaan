@@ -128,3 +128,21 @@ describe("Dashboard admin (FR-LAP-01, OQ-40, IR-UI-02)", () => {
     expect(container.textContent).not.toMatch(/bulan lalu|\+\d+%/i);
   });
 });
+
+/** Foto dekoratif di kepala halaman (decisions §B Kepala halaman area): `alt=""`, panel `aria-hidden` mulai `lg`. */
+function fotoKepala(wadah: Element) {
+  return [...wadah.querySelectorAll("header img")].map((img) => {
+    expect(img.getAttribute("alt")).toBe("");
+    expect(img.closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+    return img.getAttribute("src")!;
+  });
+}
+
+describe("Kepala halaman area (decisions §B)", () => {
+  it("IR_UI_03_dashboard_admin_berfoto_hero_beranda", async () => {
+    respons.set("/admin/dashboard", DASHBOARD);
+    const { container } = render(await DashboardAdmin());
+    expect(screen.getByRole("heading", { level: 1, name: "Dashboard" })).toBeTruthy();
+    expect(fotoKepala(container)).toEqual([expect.stringContaining("hero-beranda")]);
+  });
+});

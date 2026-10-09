@@ -321,6 +321,8 @@ describe("AlurHilangRusak (FR-HLR)", () => {
     // Nominal dari PencatatanKeluar.tagihan.nominal (FR-HLR-04)
     await waitFor(() => expect(screen.getByText("Berhasil dicatat")).toBeTruthy());
     expect(screen.getByText("Rp150.000")).toBeTruthy();
+    // Layar sukses tanpa kepala halaman (decisions §B Kepala halaman area).
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     // catatHilangRusak dipanggil dengan tanggal yang diisi admin (bukan auto dari tanggal_pinjam)
     expect(mockCatatHilangRusak).toHaveBeenCalledWith(
       ITEM_1.item_id,
@@ -478,5 +480,25 @@ describe("AlurHilangRusak galat non-API (IR-UI-04)", () => {
     await waitFor(() => screen.getByText("Konfirmasi Pencatatan"));
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Ya, Catat" })));
     await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
+  });
+});
+
+/** Kepala halaman area varian padat (decisions §B): foto dekoratif mulai `lg`, h1 `text-2xl` di bawah `lg`. */
+function periksaKepalaPadat(judul: string) {
+  const h1 = screen.getByRole("heading", { level: 1, name: judul });
+  expect(h1.className.split(" ")).toEqual(expect.arrayContaining(["text-2xl", "lg:text-4xl"]));
+  const header = h1.closest("header")!;
+  const img = header.querySelectorAll("img");
+  expect(img).toHaveLength(1);
+  expect(img[0].getAttribute("alt")).toBe("");
+  expect(img[0].getAttribute("src")).toContain("hero-beranda");
+  expect(img[0].closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+  return header;
+}
+
+describe("Kepala halaman area (decisions §B, IR-UI-01)", () => {
+  it("IR_UI_01_kepala_padat_berfoto", () => {
+    render(<AlurHilangRusak />);
+    periksaKepalaPadat("Hilang / Rusak");
   });
 });

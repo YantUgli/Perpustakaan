@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Kartu } from "@/components/ui/Kartu";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { ambilServer } from "@/lib/api-server";
 import type { components } from "@/lib/api-skema";
 
@@ -22,10 +23,7 @@ export default async function UbahJudul({ params }: { params: Promise<{ id: stri
       <Link href={`/admin/judul/${judul.id}`} className="text-sm font-semibold text-gold-700">
         ← Kembali ke detail judul
       </Link>
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Ubah Judul</h1>
-        <p className="text-navy/80">{judul.judul}</p>
-      </header>
+      <KepalaHalamanArea judul="Ubah Judul" subjudul={judul.judul} />
       <Kartu>
         <FormJudul kategori={kategori} awal={judul} />
       </Kartu>

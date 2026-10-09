@@ -2,8 +2,10 @@
 
 import { type FormEvent, useState } from "react";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { Pemindai } from "@/components/pemindai/Pemindai";
 import { Kartu } from "@/components/ui/Kartu";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { Pesan } from "@/components/ui/Pesan";
 import { Tombol } from "@/components/ui/Tombol";
@@ -129,17 +131,23 @@ export function AlurPeminjaman() {
 
   return (
     <section className="flex flex-col gap-4">
-      <header className="flex items-center justify-between">
-        <h1 className="font-display text-2xl">Peminjaman</h1>
-        <button
-          type="button"
-          onClick={reset}
-          disabled={sedangProses}
-          className="text-sm font-semibold text-gold-700 disabled:opacity-50"
-        >
-          Reset
-        </button>
-      </header>
+      {/* Kepala halaman area, varian padat (IR-UI-01): mobile tidak lebih tinggi; tidak tampil di layar sukses. */}
+      <KepalaHalamanArea
+        judul="Peminjaman"
+        subjudul="Pindai atau ketik kode anggota, lalu kode eksemplar yang akan dipinjam."
+        aksi={
+          <button
+            type="button"
+            onClick={reset}
+            disabled={sedangProses}
+            className="text-sm font-semibold text-gold-700 disabled:opacity-50"
+          >
+            Reset
+          </button>
+        }
+        foto={fotoHeroBeranda}
+        padat
+      />
 
       <p className="text-xs text-navy/60" aria-live="polite">
         {tahap === "anggota" ? "① Anggota → ② Buku → ✓ Selesai" : "① ✓ → ② Buku → ✓ Selesai"}

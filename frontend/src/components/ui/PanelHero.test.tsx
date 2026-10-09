@@ -8,7 +8,7 @@ const foto = { src: "/foto.jpg", width: 640, height: 424 };
 
 afterEach(cleanup);
 
-describe("PanelHero (foto dekoratif publik, decisions §B)", () => {
+describe("PanelHero (foto dekoratif, decisions §B)", () => {
   it("tanpa prop sisi: kelas sama dengan sebelumnya (beranda, katalog, Tentang)", () => {
     const { container } = render(<PanelHero foto={foto} />);
     const panel = container.firstElementChild as HTMLElement;

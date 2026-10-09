@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ReactElement } from "react";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -395,8 +396,9 @@ describe("Profil (FR-AKN-07, K-05)", () => {
     respons.set("/anggota/profil", PROFIL_AULIA);
     const { container } = render(await HalamanProfil());
     expect(screen.getByRole("img", { name: "Aulia Rahma" }).textContent).toBe("AR");
-    // Bukti tanpa request foto: peramban hanya memuat foto bila ada <img> berisi path foto.
-    expect(container.querySelector('img[src*="/foto"]')).toBeNull();
+    // Bukti tanpa request foto: peramban hanya memuat foto bila ada <img> berisi path endpoint foto. Selektor
+    // memakai path endpoint (bukan "/foto") karena foto dekoratif kepala halaman ada di `assets/foto/`.
+    expect(container.querySelector('img[src*="/api/v1/anggota/profil/foto"]')).toBeNull();
     expect(dipanggil).toEqual(["/anggota/profil"]);
   });
 
@@ -414,6 +416,43 @@ describe("Profil (FR-AKN-07, K-05)", () => {
     expect(within(formData).queryByLabelText(/Password Lama/)).toBeNull();
     expect(within(formPassword).getByLabelText(/Password Lama/)).toBeTruthy();
     expect(within(formPassword).queryByLabelText(/^Email/)).toBeNull();
+  });
+});
+
+/** Foto dekoratif di kepala halaman: `alt=""`, di dalam panel `aria-hidden` yang hanya tampil mulai `lg`. */
+function fotoKepala(wadah: Element) {
+  return [...wadah.querySelectorAll("header img")].map((img) => {
+    expect(img.getAttribute("alt")).toBe("");
+    expect(img.closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+    return img.getAttribute("src")!;
+  });
+}
+
+describe("Kepala halaman area (decisions §B Kepala halaman area)", () => {
+  it("IR_UI_03_menu_utama_anggota_berfoto_hero_beranda_judul_tetap", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", []);
+    respons.set("/anggota/riwayat?per_halaman=1", halaman([], 0));
+    respons.set("/anggota/riwayat?halaman=1", halaman([], 0));
+    respons.set("/anggota/tagihan?halaman=1", halaman([], 0));
+    respons.set("/anggota/qr", { kode: "AGT-000123", nama: "Aulia Rahma", isi_qr: "AGT-000123" });
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    aturTagihan([]);
+    const tanpaParam = { searchParams: Promise.resolve({}) };
+    const halamanUji: [string, () => Promise<ReactElement>][] = [
+      ["Selamat Datang, Aulia Rahma", () => Dashboard()],
+      ["QR Anggota", () => HalamanQr()],
+      ["Pinjaman Saya", () => HalamanPinjaman()],
+      ["Riwayat Peminjaman", () => HalamanRiwayat(tanpaParam)],
+      ["Tagihan", () => HalamanTagihan(tanpaParam)],
+      ["Profil Saya", () => HalamanProfil()],
+    ];
+    for (const [judul, buat] of halamanUji) {
+      const { container, unmount } = render(await buat());
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(judul);
+      expect(fotoKepala(container)).toEqual([expect.stringContaining("hero-beranda")]);
+      unmount();
+    }
   });
 });
 

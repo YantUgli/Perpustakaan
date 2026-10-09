@@ -413,3 +413,25 @@ describe("Laporan denda & penggantian (FR-LAP-03, OQ-11, OQ-39, OQ-41)", () => {
     expect(screen.getByText("Rp0")).toBeTruthy();
   });
 });
+
+/** Foto dekoratif di kepala halaman (decisions §B Kepala halaman area): `alt=""`, panel `aria-hidden` mulai `lg`. */
+function fotoKepala(wadah: Element) {
+  return [...wadah.querySelectorAll("header img")].map((img) => {
+    expect(img.getAttribute("alt")).toBe("");
+    expect(img.closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+    return img.getAttribute("src")!;
+  });
+}
+
+describe("Kepala halaman area (decisions §B)", () => {
+  it("IR_UI_03_kepala_laporan_di_layout_berfoto", () => {
+    pathAktif = "/admin/laporan/transaksi";
+    const { container } = render(
+      <LayoutLaporan>
+        <p>isi halaman</p>
+      </LayoutLaporan>,
+    );
+    expect(screen.getByRole("heading", { level: 1, name: "Laporan" })).toBeTruthy();
+    expect(fotoKepala(container)).toEqual([expect.stringContaining("hero-beranda")]);
+  });
+});

@@ -292,3 +292,21 @@ describe("Penyelesaian (FR-TGH-02..04, OQ-08, OQ-28)", () => {
     expect(fetchPalsu).not.toHaveBeenCalled();
   });
 });
+
+/** Foto dekoratif di kepala halaman (decisions §B Kepala halaman area): `alt=""`, panel `aria-hidden` mulai `lg`. */
+function fotoKepala(wadah: Element) {
+  return [...wadah.querySelectorAll("header img")].map((img) => {
+    expect(img.getAttribute("alt")).toBe("");
+    expect(img.closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+    return img.getAttribute("src")!;
+  });
+}
+
+describe("Kepala halaman area (decisions §B)", () => {
+  it("IR_UI_03_daftar_tagihan_berfoto", async () => {
+    respons.set("/admin/tagihan?halaman=1", { data: [], total: 0, halaman: 1, per_halaman: 20 });
+    const { container } = render(await DaftarTagihan({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByRole("heading", { level: 1, name: "Tagihan" })).toBeTruthy();
+    expect(fotoKepala(container)).toEqual([expect.stringContaining("hero-beranda")]);
+  });
+});

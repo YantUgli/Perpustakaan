@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ReactElement } from "react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -114,7 +115,11 @@ describe("Daftar anggota (FR-AKN-10, OQ-33)", () => {
       expect(teks).not.toMatch(dilarang);
     }
     expect(screen.queryByRole("button", { name: /hapus|tambah/i })).toBeNull();
-    expect(container.querySelector("img")).toBeNull(); // OQ-42: belum ada endpoint foto
+    // OQ-42: belum ada endpoint foto. Foto dekoratif kepala halaman (decisions §B Kepala halaman area)
+    // tidak dihitung.
+    expect(
+      [...container.querySelectorAll("img")].filter((img) => !img.closest("header")),
+    ).toHaveLength(0);
     expect(screen.getByRole("img", { name: "Aulia Rahma" }).textContent).toBe("AR");
     expect(screen.getByRole("link", { name: /Ubah/ }).getAttribute("href")).toBe(
       "/admin/anggota/AGT-000001/ubah",
@@ -425,5 +430,43 @@ describe("Kategori & rak (FR-BKU-01)", () => {
       kode: "R-01",
       lokasi: "Lantai 3",
     });
+  });
+});
+
+/** Foto dekoratif di kepala halaman (decisions §B Kepala halaman area): `alt=""`, panel `aria-hidden` mulai `lg`. */
+function fotoKepala(wadah: Element) {
+  return [...wadah.querySelectorAll("header img")].map((img) => {
+    expect(img.getAttribute("alt")).toBe("");
+    expect(img.closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+    return img.getAttribute("src")!;
+  });
+}
+
+describe("Kepala halaman area (decisions §B)", () => {
+  it("IR_UI_03_daftar_anggota_kategori_rak_berfoto", async () => {
+    respons.set("/admin/anggota?halaman=1", { data: [], total: 0, halaman: 1, per_halaman: 20 });
+    respons.set("/admin/kategori", []);
+    respons.set("/admin/rak", []);
+    const halamanUji: [string, () => Promise<ReactElement>][] = [
+      ["Data Anggota", () => DaftarAnggota({ searchParams: Promise.resolve({}) })],
+      ["Kategori", () => HalamanKategori()],
+      ["Rak", () => HalamanRak()],
+    ];
+    for (const [judul, buat] of halamanUji) {
+      const { container, unmount } = render(await buat());
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(judul);
+      expect(fotoKepala(container)).toEqual([expect.stringContaining("hero-beranda")]);
+      unmount();
+    }
+  });
+
+  it("halaman_turunan_ubah_anggota_tanpa_foto_detail_tidak_diubah", async () => {
+    respons.set("/admin/anggota/AGT-000001", AULIA);
+    const ubah = render(await UbahAnggota({ params: Promise.resolve({ kode: "AGT-000001" }) }));
+    expect(screen.getByRole("heading", { level: 1, name: "Ubah Data Anggota" })).toBeTruthy();
+    expect(ubah.container.querySelector("img")).toBeNull();
+    ubah.unmount();
+    const detail = render(await DetailAnggota({ params: Promise.resolve({ kode: "AGT-000001" }) }));
+    expect(fotoKepala(detail.container)).toEqual([]);
   });
 });

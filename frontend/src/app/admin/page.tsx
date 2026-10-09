@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { Kartu } from "@/components/ui/Kartu";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { LabelStatus } from "@/components/ui/LabelStatus";
 import { ambilServer } from "@/lib/api-server";
 import type { components } from "@/lib/api-skema";
@@ -33,10 +35,11 @@ export default async function DashboardAdmin() {
 
   return (
     <section className="flex flex-col gap-8">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Dashboard</h1>
-        <p className="text-navy/80">Ringkasan koleksi, anggota, sirkulasi, dan tagihan.</p>
-      </header>
+      <KepalaHalamanArea
+        judul="Dashboard"
+        subjudul="Ringkasan koleksi, anggota, sirkulasi, dan tagihan."
+        foto={fotoHeroBeranda}
+      />
 
       <section aria-labelledby="h-koleksi" className="flex flex-col gap-4">
         <h2 id="h-koleksi" className="font-display text-xl">

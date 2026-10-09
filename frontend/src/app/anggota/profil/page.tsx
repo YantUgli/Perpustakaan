@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { Avatar } from "@/components/ui/Avatar";
 import { Kartu } from "@/components/ui/Kartu";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { ambilServer } from "@/lib/api-server";
 import type { components } from "@/lib/api-skema";
 import { formatTanggal } from "@/lib/format";
@@ -24,10 +26,11 @@ export default async function HalamanProfil() {
   const profil = await ambilServer<Profil>("/anggota/profil");
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Profil Saya</h1>
-        <p className="text-navy/80">Perbarui data diri dan password Anda.</p>
-      </header>
+      <KepalaHalamanArea
+        judul="Profil Saya"
+        subjudul="Ubah data diri dan password Anda."
+        foto={fotoHeroBeranda}
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[18rem_1fr]">
         <Kartu className="flex flex-col items-center gap-4 text-center">

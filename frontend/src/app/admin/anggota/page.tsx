@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { Avatar } from "@/components/ui/Avatar";
 import { Isian } from "@/components/ui/Isian";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { Paginasi } from "@/components/ui/Paginasi";
 import { TautanTombol, Tombol } from "@/components/ui/Tombol";
@@ -32,12 +34,11 @@ export default async function DaftarAnggota({
 
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Data Anggota</h1>
-        <p className="text-navy/80">
-          Cari anggota dan ubah datanya. Anggota mendaftar sendiri lewat halaman pendaftaran.
-        </p>
-      </header>
+      <KepalaHalamanArea
+        judul="Data Anggota"
+        subjudul="Cari anggota dan ubah datanya; anggota mendaftar sendiri lewat halaman pendaftaran."
+        foto={fotoHeroBeranda}
+      />
 
       <form
         method="get"

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { PanelHero } from "@/components/publik/PanelHero";
 import { Kartu } from "@/components/ui/Kartu";
 import { Logo } from "@/components/ui/Logo";
+import { PanelHero } from "@/components/ui/PanelHero";
 import { fotoHeroBeranda } from "@/assets/foto";
 import { ambilSesiAtauTamu } from "@/lib/api-server";
 import { berandaRole } from "@/lib/sesi";

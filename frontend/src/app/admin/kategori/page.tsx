@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { fotoHeroBeranda } from "@/assets/foto";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { ambilServer } from "@/lib/api-server";
 import type { components } from "@/lib/api-skema";
 
@@ -12,10 +14,11 @@ export default async function HalamanKategori() {
   const data = await ambilServer<components["schemas"]["KategoriKeluar"][]>("/admin/kategori");
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Kategori</h1>
-        <p className="text-navy/80">Pengelompokan judul buku. Satu judul punya satu kategori.</p>
-      </header>
+      <KepalaHalamanArea
+        judul="Kategori"
+        subjudul="Kelola kategori untuk mengelompokkan judul buku."
+        foto={fotoHeroBeranda}
+      />
       <DaftarMaster jenis="kategori" data={data} />
     </section>
   );
