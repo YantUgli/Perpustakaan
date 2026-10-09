@@ -2,10 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   JUDUL_ALASAN_UMUM,
+  PER_HALAMAN_RIWAYAT,
   PER_HALAMAN_TAGIHAN,
+  ambilSemuaHalaman,
+  hitungPerStatus,
   judulAlasan,
   pinjamanTerdekat,
+  potongHalaman,
+  statusRiwayatDariParam,
   tagihanAktif,
+  tanggalAkhir,
   teksSisaHari,
 } from "./area-anggota";
 import { halamanDariParam, jumlahHalaman } from "./halaman";
@@ -137,5 +143,92 @@ describe("tagihanAktif (FR-AGT-04, D1 08/10/2026: hanya tampilan)", () => {
 
   it("semua Lunas → 0", async () => {
     expect(await tagihanAktif(serverPalsu(3, () => "LUNAS"))).toEqual([]);
+  });
+});
+
+describe("ambilSemuaHalaman (hanya tampilan; dipakai tagihanAktif & Riwayat hal-13)", () => {
+  function server(total: number) {
+    const semua = Array.from({ length: total }, (_, i) => ({ id: i + 1 }));
+    return vi.fn(async (path: string) => {
+      const q = new URLSearchParams(path.split("?")[1]);
+      const h = Number(q.get("halaman"));
+      const per = Number(q.get("per_halaman"));
+      return { data: semua.slice((h - 1) * per, h * per), total };
+    });
+  }
+
+  it.each([
+    [0, 1],
+    [1, 1],
+    [100, 1],
+    [101, 2],
+    [250, 3],
+  ])("total_%i_mengambil_%i_halaman_dan_urutan_gabungan_terjaga", async (total, panggilan) => {
+    const ambil = server(total);
+    const hasil = await ambilSemuaHalaman("/anggota/riwayat", ambil);
+    expect(ambil.mock.calls.map(([p]) => p)).toEqual(
+      Array.from(
+        { length: panggilan },
+        (_, i) => `/anggota/riwayat?halaman=${i + 1}&per_halaman=100`,
+      ),
+    );
+    expect(hasil.map((x) => x.id)).toEqual(Array.from({ length: total }, (_, i) => i + 1));
+  });
+
+  it("halaman_ke_2_gagal_galat_diteruskan_tanpa_data_parsial", async () => {
+    const galat = new Error("gagal");
+    const ambil = vi.fn(async (path: string) => {
+      if (path.includes("halaman=2")) throw galat;
+      return { data: [{ id: 1 }], total: 150 };
+    });
+    await expect(ambilSemuaHalaman("/anggota/riwayat", ambil)).rejects.toBe(galat);
+  });
+});
+
+describe("Riwayat hal-13: status, hitungan, potongan halaman, tanggal akhir", () => {
+  it("statusRiwayatDariParam_kontrol_tertutup", () => {
+    expect(statusRiwayatDariParam("HILANG")).toBe("HILANG");
+    expect(statusRiwayatDariParam("DIPINJAM")).toBe("DIPINJAM");
+    for (const x of ["TERLAMBAT", "hilang", "", undefined, ["HILANG", "RUSAK"], "BELUM_LUNAS"]) {
+      expect(statusRiwayatDariParam(x)).toBeUndefined();
+    }
+  });
+
+  it("hitungPerStatus_dipinjam_termasuk_terlambat", () => {
+    expect(
+      hitungPerStatus([
+        { status: "DIPINJAM", terlambat: true },
+        { status: "DIPINJAM", terlambat: false },
+        { status: "DIKEMBALIKAN" },
+        { status: "HILANG" },
+      ] as { status: string }[]),
+    ).toEqual({ DIPINJAM: 2, DIKEMBALIKAN: 1, HILANG: 1, RUSAK: 0 });
+  });
+
+  it("potongHalaman_20_per_halaman_di_luar_jangkauan_kosong", () => {
+    expect(PER_HALAMAN_RIWAYAT).toBe(20);
+    const semua = Array.from({ length: 45 }, (_, i) => i + 1);
+    expect(potongHalaman(semua, 1)).toEqual(semua.slice(0, 20));
+    expect(potongHalaman(semua, 3)).toEqual([41, 42, 43, 44, 45]);
+    expect(potongHalaman(semua, 4)).toEqual([]);
+  });
+
+  it("tanggalAkhir_kejadian_untuk_hilang_rusak_kembali_untuk_lainnya", () => {
+    const dasar = { tanggal_kembali: "2026-07-15", tanggal_kejadian: "2026-07-10" };
+    expect(tanggalAkhir({ ...dasar, status: "HILANG" })).toMatchObject({
+      label: "Tanggal kejadian",
+      tanggal: "2026-07-10",
+    });
+    expect(tanggalAkhir({ ...dasar, status: "RUSAK" }).label).toBe("Tanggal kejadian");
+    expect(tanggalAkhir({ ...dasar, status: "DIKEMBALIKAN" })).toMatchObject({
+      label: "Tanggal kembali",
+      tanggal: "2026-07-15",
+    });
+    expect(
+      tanggalAkhir({ status: "DIPINJAM", tanggal_kembali: null, tanggal_kejadian: null }),
+    ).toEqual({ label: "Tanggal kembali", tanggal: null, kosong: "Belum dikembalikan" });
+    expect(
+      tanggalAkhir({ status: "HILANG", tanggal_kembali: null, tanggal_kejadian: null }).kosong,
+    ).toBe("—");
   });
 });

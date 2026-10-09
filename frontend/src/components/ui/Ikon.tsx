@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 
-/** Ikon dekoratif (garis `currentColor`, kecuali varian `…Isi` yang solid). Selalu `aria-hidden`: maknanya dibawa teks di sebelahnya. */
+/**
+ * Ikon dekoratif (garis `currentColor`, kecuali varian `…Isi` yang solid). Selalu `aria-hidden`: maknanya dibawa
+ * teks di sebelahnya.
+ */
 const PATH = {
   cari: (
     <>
@@ -392,6 +395,10 @@ const PATH = {
   centang: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   /** Tanda seru (banner kelayakan: belum dapat meminjam). */
   seru: <path d="M12 5.5v8m0 4.5v.01" />,
+  /** Kunci pas garis (kartu Rusak, Riwayat hal-13). */
+  perkakas: (
+    <path d="M14.5 6.5a4 4 0 0 0 5.2 5.2l-8.6 8.6a2.1 2.1 0 0 1-3-3l8.6-8.6a4 4 0 0 1 5.2-5.2l-2.6 2.6.5 2 2 .5Z" />
+  ),
   /** Gedung berpilar garis (Penerbit, detail buku hal-05). */
   gedung: <path d="M3 9.5 12 4l9 5.5ZM5 9.5v9m4.67-9v9m4.66-9v9M19 9.5v9M3 20.5h18" />,
   /** Tumpukan koin garis (Harga, detail buku hal-05). */

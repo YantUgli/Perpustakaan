@@ -35,25 +35,92 @@ export function pinjamanTerdekat<T>(daftar: T[], jumlah = 3): T[] {
   return daftar.slice(0, jumlah);
 }
 
-/** Batas `per_halaman` backend (decisions §B "Daftar berhalaman"). */
-export const PER_HALAMAN_TAGIHAN = 100;
+/** Batas `per_halaman` backend (decisions §B "Daftar berhalaman"); dipakai untuk mengambil semua halaman. */
+export const PER_HALAMAN_SEMUA = 100;
+/** Nama lama, tetap diekspor: tagihan dashboard memakai batas yang sama. */
+export const PER_HALAMAN_TAGIHAN = PER_HALAMAN_SEMUA;
 
-type HalamanStatus<T extends { status: string }> = { data: T[]; total: number };
+type Halaman<T> = { data: T[]; total: number };
+
+/**
+ * Semua baris daftar berhalaman, hanya untuk tampilan (D1 dashboard; Riwayat hal-13). Halaman 1 lebih dulu, lalu
+ * halaman 2..ceil(total/100) saja; digabung berurutan sehingga urutan API terjaga (tanpa urut ulang). Halaman mana
+ * pun gagal → galat diteruskan (tidak ada data parsial).
+ */
+export async function ambilSemuaHalaman<T>(
+  pathDasar: string,
+  ambil: (path: string) => Promise<Halaman<T>>,
+): Promise<T[]> {
+  const path = (h: number) => `${pathDasar}?halaman=${h}&per_halaman=${PER_HALAMAN_SEMUA}`;
+  const pertama = await ambil(path(1));
+  const jumlah = Math.ceil(pertama.total / PER_HALAMAN_SEMUA);
+  const sisa = await Promise.all(
+    Array.from({ length: Math.max(jumlah - 1, 0) }, (_, i) => ambil(path(i + 2))),
+  );
+  return [pertama, ...sisa].flatMap((h) => h.data);
+}
 
 /**
  * D1 (Ayen 08/10/2026), FR-AGT-04 ringkas: tagihan `BELUM_LUNAS` (urutan API) untuk kartu "Tagihan Aktif"
- * (`.length`) dan panel Tagihan Aktif (3 teratas, keputusan 09/10/2026). Halaman 1 lebih dulu, lalu halaman
- * 2..ceil(total/100) saja. Galat diteruskan. Tidak menentukan kelayakan apa pun.
+ * (`.length`) dan panel Tagihan Aktif (3 teratas, keputusan 09/10/2026). Galat diteruskan. Tidak menentukan
+ * kelayakan apa pun.
  */
 export async function tagihanAktif<T extends { status: string }>(
-  ambil: (path: string) => Promise<HalamanStatus<T>>,
+  ambil: (path: string) => Promise<Halaman<T>>,
 ): Promise<T[]> {
   // Hanya tampilan (D1); kelayakan dari /anggota/kelayakan
-  const path = (h: number) => `/anggota/tagihan?halaman=${h}&per_halaman=${PER_HALAMAN_TAGIHAN}`;
-  const pertama = await ambil(path(1));
-  const jumlahHalaman = Math.ceil(pertama.total / PER_HALAMAN_TAGIHAN);
-  const sisa = await Promise.all(
-    Array.from({ length: Math.max(jumlahHalaman - 1, 0) }, (_, i) => ambil(path(i + 2))),
-  );
-  return [pertama, ...sisa].flatMap((h) => h.data).filter((t) => t.status === "BELUM_LUNAS");
+  const semua = await ambilSemuaHalaman("/anggota/tagihan", ambil);
+  return semua.filter((t) => t.status === "BELUM_LUNAS");
+}
+
+/** Status item riwayat (domain-rules §2); "Terlambat" bukan status, jadi bukan tab maupun kartu (IR-UI-03). */
+export const STATUS_RIWAYAT = ["DIPINJAM", "DIKEMBALIKAN", "HILANG", "RUSAK"] as const;
+export type StatusRiwayat = (typeof STATUS_RIWAYAT)[number];
+
+/** Riwayat hal-13: per halaman sama dengan bawaan backend. */
+export const PER_HALAMAN_RIWAYAT = 20;
+
+/** `?status=` → kode sah, selain itu (tak dikenal, kosong, berulang) `undefined` = Semua (kontrol tertutup). */
+export function statusRiwayatDariParam(
+  nilai: string | string[] | undefined,
+): StatusRiwayat | undefined {
+  return typeof nilai === "string" && (STATUS_RIWAYAT as readonly string[]).includes(nilai)
+    ? (nilai as StatusRiwayat)
+    : undefined;
+}
+
+/**
+ * Hitungan per kode `status` seluruh item, hanya tampilan (keputusan Ayen 09/10/2026). `DIPINJAM` mencakup item
+ * terlambat (status tersimpan tetap Dipinjam; BR-08, OQ-40).
+ */
+export function hitungPerStatus(item: { status: string }[]): Record<StatusRiwayat, number> {
+  const hasil = { DIPINJAM: 0, DIKEMBALIKAN: 0, HILANG: 0, RUSAK: 0 };
+  for (const i of item) if (i.status in hasil) hasil[i.status as StatusRiwayat] += 1;
+  return hasil;
+}
+
+/** Potongan halaman di klien; di luar jangkauan → kosong (seperti backend). */
+export function potongHalaman<T>(semua: T[], halaman: number, per = PER_HALAMAN_RIWAYAT): T[] {
+  return semua.slice((halaman - 1) * per, halaman * per);
+}
+
+type TanggalItem = {
+  status: string;
+  tanggal_kembali: string | null;
+  tanggal_kejadian: string | null;
+};
+
+/**
+ * Tanggal penutup item riwayat (OQ-35): kejadian untuk Hilang/Rusak, kembali untuk lainnya; `null` = belum ada
+ * ("—" untuk kejadian, "Belum dikembalikan" untuk kembali). Dipakai kartu dan tabel Riwayat.
+ */
+export function tanggalAkhir(item: TanggalItem): {
+  label: "Tanggal kejadian" | "Tanggal kembali";
+  tanggal: string | null;
+  kosong: string;
+} {
+  if (item.status === "HILANG" || item.status === "RUSAK") {
+    return { label: "Tanggal kejadian", tanggal: item.tanggal_kejadian, kosong: "—" };
+  }
+  return { label: "Tanggal kembali", tanggal: item.tanggal_kembali, kosong: "Belum dikembalikan" };
 }

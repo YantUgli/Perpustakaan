@@ -732,52 +732,216 @@ describe("Pinjaman Saya (FR-AGT-02, OQ-34)", () => {
   });
 });
 
-describe("Riwayat (FR-AGT-03, OQ-35)", () => {
+describe("Riwayat (FR-AGT-03, OQ-35; hal-13 opsi b: semua halaman, hanya tampilan)", () => {
+  type Riwayat = {
+    kode_eksemplar: string;
+    judul: string;
+    tanggal_pinjam: string;
+    jatuh_tempo: string;
+    tanggal_kembali: string | null;
+    status: string;
+    terlambat: boolean;
+    tanggal_kejadian: string | null;
+  };
+  const item = (n: number, ubah: Partial<Riwayat> = {}): Riwayat => ({
+    kode_eksemplar: `EKS-${String(n).padStart(6, "0")}`,
+    judul: `Buku ${n}`,
+    tanggal_pinjam: "2026-07-01",
+    jatuh_tempo: "2026-07-31",
+    tanggal_kembali: "2026-07-15",
+    status: "DIKEMBALIKAN",
+    terlambat: false,
+    tanggal_kejadian: null,
+    ...ubah,
+  });
+  /** Server palsu: semua item dipecah per 100 seperti backend (`per_halaman=100`). */
+  function aturRiwayat(semua: Riwayat[]) {
+    const jumlah = Math.max(1, Math.ceil(semua.length / 100));
+    for (let h = 1; h <= jumlah; h++) {
+      respons.set(`/anggota/riwayat?halaman=${h}&per_halaman=100`, {
+        data: semua.slice((h - 1) * 100, h * 100),
+        total: semua.length,
+        halaman: h,
+        per_halaman: 100,
+      });
+    }
+  }
+  const buka = async (q: Record<string, string> = {}) =>
+    render(await HalamanRiwayat({ searchParams: Promise.resolve(q) }));
+  const tabel = () => screen.getByRole("table", { name: "Daftar Riwayat Peminjaman" });
+  const daftarKartu = () => screen.getByRole("list", { name: "Daftar Riwayat Peminjaman" });
+  const ringkas = (label: string) => {
+    const grid = screen.getByText("Total Riwayat").closest("div.grid") as HTMLElement;
+    return within(grid).getByText(label).closest("div")!;
+  };
+  const tab = (nama: string) =>
+    within(screen.getByRole("navigation", { name: "Saring riwayat menurut status" })).getByRole(
+      "link",
+      { name: nama },
+    );
+
   it("FR_AGT_03_hilang_rusak_tampil_tanggal_kejadian_tanpa_keterangan", async () => {
-    respons.set("/anggota/riwayat?halaman=2", {
-      ...halaman(
-        [
-          {
-            kode_eksemplar: "EKS-000009",
-            judul: "Kota yang Tak Tidur",
-            tanggal_pinjam: "2026-08-01",
-            jatuh_tempo: "2026-08-31",
-            tanggal_kembali: null,
-            status: "HILANG",
-            terlambat: false,
-            tanggal_kejadian: "2026-08-20",
-          },
-          {
-            kode_eksemplar: "EKS-000010",
-            judul: "Batas dan Harapan",
-            tanggal_pinjam: "2026-07-01",
-            jatuh_tempo: "2026-07-31",
-            tanggal_kembali: "2026-07-15",
-            status: "DIKEMBALIKAN",
-            terlambat: false,
-            tanggal_kejadian: null,
-          },
-        ],
-        25,
-      ),
-      halaman: 2,
+    // 25 item: halaman 2 (klien, 20/halaman) dimulai dari item ke-21.
+    const semua = Array.from({ length: 25 }, (_, i) => item(i + 1));
+    semua[20] = item(21, {
+      judul: "Kota yang Tak Tidur",
+      status: "HILANG",
+      tanggal_kembali: null,
+      tanggal_kejadian: "2026-08-20",
     });
-    render(await HalamanRiwayat({ searchParams: Promise.resolve({ halaman: "2" }) }));
-    const [hilang, kembali] = screen.getAllByRole("listitem");
+    aturRiwayat(semua);
+    await buka({ halaman: "2" });
+    const [hilang, kembali] = within(daftarKartu()).getAllByRole("listitem");
     expect(within(hilang).getByText("Hilang")).toBeTruthy();
     expect(within(hilang).getByText("Tanggal kejadian")).toBeTruthy();
     expect(within(hilang).getByText("20/08/2026")).toBeTruthy();
     expect(within(hilang).queryByText(/keterangan/i)).toBeNull();
     expect(within(kembali).getByText("Dikembalikan")).toBeTruthy();
     expect(within(kembali).getByText("15/07/2026")).toBeTruthy();
+    const barisHilang = within(tabel()).getAllByRole("row")[1];
+    expect(within(barisHilang).getByText("Hilang")).toBeTruthy();
+    expect(within(barisHilang).getByText("20/08/2026")).toBeTruthy();
     expect(screen.getByText("Halaman 2 dari 2")).toBeTruthy();
   });
 
   it("parameter halaman tidak sah → halaman 1", async () => {
-    respons.set("/anggota/riwayat?halaman=1", halaman([]));
-    render(await HalamanRiwayat({ searchParams: Promise.resolve({ halaman: "-3" }) }));
-    expect(dipanggil).toContain("/anggota/riwayat?halaman=1");
+    aturRiwayat([]);
+    await buka({ halaman: "-3" });
+    expect(dipanggil).toEqual(["/anggota/riwayat?halaman=1&per_halaman=100"]);
     expect(screen.getByText("Belum ada riwayat peminjaman")).toBeTruthy();
+  });
+
+  it("FR_AGT_03_hitungan_per_status_lintas_halaman_dipinjam_termasuk_terlambat", async () => {
+    // 150 item di 2 halaman API: 100 Dikembalikan, 30 Dipinjam (10 terlambat), 15 Hilang, 5 Rusak.
+    const semua = [
+      ...Array.from({ length: 100 }, (_, i) => item(i + 1)),
+      ...Array.from({ length: 30 }, (_, i) =>
+        item(101 + i, { status: "DIPINJAM", tanggal_kembali: null, terlambat: i < 10 }),
+      ),
+      ...Array.from({ length: 15 }, (_, i) =>
+        item(131 + i, { status: "HILANG", tanggal_kembali: null, tanggal_kejadian: "2026-07-10" }),
+      ),
+      ...Array.from({ length: 5 }, (_, i) =>
+        item(146 + i, { status: "RUSAK", tanggal_kembali: null, tanggal_kejadian: "2026-07-10" }),
+      ),
+    ];
+    aturRiwayat(semua);
+    await buka();
+    expect(dipanggil).toEqual([
+      "/anggota/riwayat?halaman=1&per_halaman=100",
+      "/anggota/riwayat?halaman=2&per_halaman=100",
+    ]);
+    expect(ringkas("Total Riwayat").textContent).toContain("150buku");
+    expect(ringkas("Dipinjam").textContent).toContain("30buku");
+    expect(ringkas("Dikembalikan").textContent).toContain("100buku");
+    expect(ringkas("Hilang").textContent).toContain("15buku");
+    expect(ringkas("Rusak").textContent).toContain("5buku");
+    // Tidak ada kartu maupun tab "Terlambat" (bukan status, IR-UI-03).
+    expect(screen.getByText("Total Riwayat").closest("div.grid")!.textContent).not.toContain(
+      "Terlambat",
+    );
+    expect(
+      within(screen.getByRole("navigation", { name: "Saring riwayat menurut status" }))
+        .getAllByRole("link")
+        .map((l) => l.textContent),
+    ).toEqual(["Semua", "Dipinjam", "Dikembalikan", "Hilang", "Rusak"]);
+  });
+
+  it("FR_AGT_03_status_menyaring_lintas_halaman_bukan_hanya_20_baris", async () => {
+    // Item Hilang hanya ada di halaman API ke-2 (indeks 120..124).
+    const semua = Array.from({ length: 130 }, (_, i) =>
+      i >= 120 && i < 125
+        ? item(i + 1, { status: "HILANG", tanggal_kembali: null, tanggal_kejadian: "2026-07-10" })
+        : item(i + 1),
+    );
+    aturRiwayat(semua);
+    await buka({ status: "HILANG" });
+    const baris = within(tabel()).getAllByRole("row").slice(1);
+    expect(baris.map((b) => within(b).getAllByRole("cell")[0].textContent)).toEqual(
+      [121, 122, 123, 124, 125].map((n) => `Buku ${n}EKS-${String(n).padStart(6, "0")}`),
+    );
+    expect(tab("Hilang").getAttribute("aria-current")).toBe("page");
+    expect(tab("Semua").getAttribute("aria-current")).toBeNull();
+    expect(screen.getByText("Halaman 1 dari 1")).toBeTruthy();
+  });
+
+  it("status_tak_sah_atau_berulang_menjadi_semua", async () => {
+    aturRiwayat([item(1), item(2, { status: "HILANG", tanggal_kembali: null })]);
+    for (const q of [{ status: "TERLAMBAT" }, { status: "hilang" }, { status: "" }]) {
+      const { unmount } = await buka(q);
+      expect(tab("Semua").getAttribute("aria-current")).toBe("page");
+      expect(within(tabel()).getAllByRole("row")).toHaveLength(3);
+      unmount();
+    }
+    const berulang = await HalamanRiwayat({
+      searchParams: Promise.resolve({ status: ["HILANG", "RUSAK"] }),
+    });
+    render(berulang);
+    expect(tab("Semua").getAttribute("aria-current")).toBe("page");
+  });
+
+  it("ganti_tab_tanpa_halaman", async () => {
+    aturRiwayat(Array.from({ length: 45 }, (_, i) => item(i + 1)));
+    await buka({ halaman: "3", status: "DIKEMBALIKAN" });
+    expect(tab("Semua").getAttribute("href")).toBe("/anggota/riwayat");
+    expect(tab("Dipinjam").getAttribute("href")).toBe("/anggota/riwayat?status=DIPINJAM");
+    expect(tab("Rusak").getAttribute("href")).toBe("/anggota/riwayat?status=RUSAK");
+  });
+
+  it("paginasi_klien_20_per_halaman_mempertahankan_status", async () => {
+    aturRiwayat(Array.from({ length: 45 }, (_, i) => item(i + 1)));
+    await buka({ status: "DIKEMBALIKAN", halaman: "2" });
+    const baris = within(tabel()).getAllByRole("row").slice(1);
+    expect(baris).toHaveLength(20);
+    expect(within(baris[0]).getByText("Buku 21")).toBeTruthy();
+    expect(screen.getByText("Halaman 2 dari 3")).toBeTruthy();
+    const nav = screen.getByRole("navigation", { name: "Navigasi halaman" });
+    expect(within(nav).getByRole("link", { name: "Berikutnya" }).getAttribute("href")).toBe(
+      "/anggota/riwayat?status=DIKEMBALIKAN&halaman=3",
+    );
+    expect(within(nav).getByRole("link", { name: "Sebelumnya" }).getAttribute("href")).toBe(
+      "/anggota/riwayat?status=DIKEMBALIKAN&halaman=1",
+    );
+  });
+
+  it("halaman_di_luar_jangkauan_kosong", async () => {
+    aturRiwayat([item(1)]);
+    await buka({ halaman: "9" });
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByText("Tidak ada riwayat di halaman ini.")).toBeTruthy();
+  });
+
+  it("kosong_per_tab", async () => {
+    aturRiwayat([item(1)]);
+    await buka({ status: "RUSAK" });
+    expect(screen.getByText("Tidak ada riwayat dengan status Rusak.")).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("galat_halaman_ke_2_diteruskan_tanpa_data_parsial", async () => {
+    const galat = new Error("halaman 2 gagal");
+    respons.set("/anggota/riwayat?halaman=1&per_halaman=100", {
+      data: Array.from({ length: 100 }, (_, i) => item(i + 1)),
+      total: 150,
+      halaman: 1,
+      per_halaman: 100,
+    });
+    respons.set("/anggota/riwayat?halaman=2&per_halaman=100", Promise.reject(galat));
+    await expect(HalamanRiwayat({ searchParams: Promise.resolve({}) })).rejects.toBe(galat);
+  });
+
+  it("FR_AGT_03_dipinjam_terlambat_label_dari_field_dan_belum_dikembalikan", async () => {
+    aturRiwayat([item(1, { status: "DIPINJAM", tanggal_kembali: null, terlambat: true })]);
+    await buka();
+    const baris = within(tabel()).getAllByRole("row")[1];
+    expect(within(baris).getByText("Terlambat")).toBeTruthy();
+    expect(within(baris).getByText("Belum dikembalikan")).toBeTruthy();
+    const kartu = within(daftarKartu()).getByRole("listitem");
+    expect(within(kartu).getByText("Terlambat")).toBeTruthy();
+    expect(within(kartu).getByText("Belum dikembalikan")).toBeTruthy();
+    // Tanpa ID transaksi, cover, ikon sort, maupun tautan detail per baris.
+    expect(screen.queryByText(/ID Transaksi|TRX/)).toBeNull();
+    expect(tabel().querySelector("img, a")).toBeNull();
   });
 });
 
@@ -896,7 +1060,7 @@ describe("Kepala halaman area (decisions §B Kepala halaman area)", () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", []);
     respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
-    respons.set("/anggota/riwayat?halaman=1", halaman([], 0));
+    respons.set("/anggota/riwayat?halaman=1&per_halaman=100", halaman([], 0));
     respons.set("/anggota/tagihan?halaman=1", halaman([], 0));
     respons.set("/anggota/qr", { kode: "AGT-000123", nama: "Aulia Rahma", isi_qr: "AGT-000123" });
     respons.set("/anggota/profil", PROFIL_AULIA);
