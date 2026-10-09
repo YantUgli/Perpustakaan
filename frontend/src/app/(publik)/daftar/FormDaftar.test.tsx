@@ -173,6 +173,49 @@ describe("FormDaftar (FR-AKN-01..04)", () => {
     expect(screen.queryByText(/6 karakter/)).toBeNull();
   });
 
+  it("NFR_SEC_02_placeholder_password_minimal_8", () => {
+    render(<FormDaftar />);
+    const isian = screen.getByLabelText(/^Password/) as HTMLInputElement;
+    expect(isian.placeholder).toBe("Minimal 8 karakter");
+  });
+
+  it("NFR_SEC_02_tombol_mata_tidak_mengirim_form_dan_mengubah_type", () => {
+    render(<FormDaftar />);
+    const isian = screen.getByLabelText(/^Password/) as HTMLInputElement;
+    const mata = screen.getByRole("button", { name: "Tampilkan password" });
+    expect(mata.getAttribute("type")).toBe("button");
+    expect(isian.type).toBe("password");
+    expect(mata.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByRole("checkbox")).toBeNull();
+
+    fireEvent.click(mata);
+    expect(isian.type).toBe("text");
+    expect(mata.getAttribute("aria-pressed")).toBe("true");
+    expect(mata.getAttribute("aria-label")).toBe("Tampilkan password");
+    expect(fetchPalsu).not.toHaveBeenCalled();
+    // Validasi klien tidak terpicu: tombol mata bukan submit.
+    expect(screen.queryByText("Periksa kembali isian yang ditandai.")).toBeNull();
+  });
+
+  it("ikon_dekoratif_di_setiap_isian", () => {
+    const { container } = render(<FormDaftar />);
+    const ikon = [...container.querySelectorAll('form [aria-hidden="true"] > svg[data-ikon]')].map(
+      (s) => s.getAttribute("data-ikon"),
+    );
+    for (const nama of ["orang", "ktp", "amplop", "telepon", "pin", "gembok", "gambar"]) {
+      expect(ikon).toContain(nama);
+    }
+  });
+
+  it("tombol_kirim_dan_tautan_masuk_berpanah_nama_aksesibel_tetap", () => {
+    render(<FormDaftar />);
+    const tombol = screen.getByRole("button", { name: "Daftar Menjadi Anggota" });
+    expect(tombol.querySelector('svg[data-ikon="panah"]')).not.toBeNull();
+    const tautan = screen.getByRole("link", { name: "Masuk di sini" });
+    expect(tautan.getAttribute("href")).toBe("/masuk");
+    expect(tautan.querySelector('svg[data-ikon="panah"]')).not.toBeNull();
+  });
+
   it("di luar lingkup tidak ikut: tanpa e-book/digital & rekomendasi", () => {
     render(<FormDaftar />);
     expect(screen.queryByText(/digital|rekomendasi|e-book/i)).toBeNull();

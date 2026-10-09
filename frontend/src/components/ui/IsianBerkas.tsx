@@ -1,4 +1,4 @@
-import { type ComponentProps, useId } from "react";
+import { type ComponentProps, type ReactNode, useId } from "react";
 
 import { kelasTombol } from "./Tombol";
 
@@ -14,13 +14,18 @@ type Props = Omit<ComponentProps<"input">, "type" | "value" | "onChange"> & {
   keterangan?: string;
   /** Pesan galat untuk isian ini, biasanya `detail.isian[name]` dari backend (IR-UI-04). */
   galat?: string;
+  /**
+   * Ikon dekoratif di kiri (mis. `<Ikon nama="gambar" />`); tidak menerima klik. Bila diisi, tombol & nama berkas
+   * dibungkus bingkai bergaris seperti `Isian` (hal-08). Tanpa prop ini, DOM sama seperti semula.
+   */
+  awalan?: ReactNode;
 };
 
 /**
  * Isian unggah berkas berbahasa Indonesia (NFR-USA-02): teks bawaan peramban ("Choose File …") tidak tampil.
  * Input file disembunyikan visual tetapi tetap satu-satunya titik fokus dan berlabel; "tombol" adalah `<label>`
  * bergaya Tombol sekunder sehingga klik maupun Spasi/Enter pada input membuka pemilih berkas bawaan.
- * Dipakai foto anggota (5.4.3) dan kelak cover judul (5.4.7).
+ * Dipakai foto anggota (5.4.3) dan cover judul (5.4.7).
  */
 export function IsianBerkas({
   label,
@@ -30,6 +35,7 @@ export function IsianBerkas({
   teksKosong = "Belum ada berkas dipilih",
   keterangan,
   galat,
+  awalan,
   id,
   required,
   ...lain
@@ -54,7 +60,21 @@ export function IsianBerkas({
           </span>
         )}
       </label>
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
+      <div
+        className={
+          awalan
+            ? `relative flex min-h-11 min-w-0 items-center gap-3 rounded-lg border bg-surface py-0.5 pr-1 pl-11 ${galat ? "border-status-hilang" : "border-navy/40"}`
+            : "flex min-w-0 flex-wrap items-center gap-3"
+        }
+      >
+        {awalan && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-navy/60"
+          >
+            {awalan}
+          </span>
+        )}
         <input
           id={idIsian}
           type="file"
@@ -69,7 +89,7 @@ export function IsianBerkas({
           htmlFor={idIsian}
           className={kelasTombol(
             "sekunder",
-            `cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy ${galat ? "border-status-hilang" : ""}`,
+            `cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy ${galat ? "border-status-hilang" : ""}${awalan ? " shrink-0 whitespace-nowrap" : ""}`,
           )}
         >
           {teksTombol}

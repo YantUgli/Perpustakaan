@@ -229,6 +229,100 @@ describe("IsianBerkas (NFR-USA-02, IR-UI-04)", () => {
   });
 });
 
+/*
+ * Patokan DOM diambil dari AreaIsian & IsianBerkas SEBELUM prop `awalan` ditambahkan (09/10/2026, hal-08):
+ * tanpa `awalan`, pemakai lama harus mendapat DOM & kelas yang sama persis.
+ */
+const PATOKAN = {
+  AREA: '<div class="flex min-w-0 flex-col gap-1.5"><label for="alamat" class="text-sm font-medium text-navy">Alamat</label><textarea id="alamat" rows="3" class="w-full min-w-0 rounded-lg border bg-surface px-3 py-2 text-navy placeholder:text-navy/50 focus:outline-2 focus:outline-offset-1 focus:outline-navy border-navy/40 " name="alamat"></textarea></div>',
+  AREA_GALAT:
+    '<div class="flex min-w-0 flex-col gap-1.5"><label for="alamat" class="text-sm font-medium text-navy">Alamat<span aria-hidden="true" class="text-status-hilang"> *</span></label><textarea id="alamat" required="" rows="3" aria-invalid="true" aria-describedby="alamat-galat" class="w-full min-w-0 rounded-lg border bg-surface px-3 py-2 text-navy placeholder:text-navy/50 focus:outline-2 focus:outline-offset-1 focus:outline-navy border-status-hilang " name="alamat" placeholder="X"></textarea><p id="alamat-galat" class="text-sm text-status-hilang">Alamat wajib diisi.</p></div>',
+  BERKAS:
+    '<div class="flex min-w-0 flex-col gap-1.5"><label for="foto" class="text-sm font-medium text-navy">Foto</label><div class="flex min-w-0 flex-wrap items-center gap-3"><input id="foto" aria-describedby="foto-nama foto-ket" class="peer sr-only" type="file" name="foto"><label for="foto" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy focus-visible:ring-2 focus-visible:ring-ivory disabled:cursor-not-allowed disabled:opacity-60 bg-transparent text-navy border border-navy hover:bg-navy/5 cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy ">Pilih Foto</label><span id="foto-nama" aria-live="polite" class="min-w-0 truncate text-sm text-navy/80">Belum ada foto dipilih</span></div><p id="foto-ket" class="text-xs text-navy/70">Ket.</p></div>',
+  BERKAS_GALAT:
+    '<div class="flex min-w-0 flex-col gap-1.5"><label for="foto" class="text-sm font-medium text-navy">Foto</label><div class="flex min-w-0 flex-wrap items-center gap-3"><input id="foto" aria-invalid="true" aria-describedby="foto-nama foto-galat" class="peer sr-only" type="file" name="foto"><label for="foto" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy focus-visible:ring-2 focus-visible:ring-ivory disabled:cursor-not-allowed disabled:opacity-60 bg-transparent text-navy border border-navy hover:bg-navy/5 cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy border-status-hilang">Pilih Berkas</label><span id="foto-nama" aria-live="polite" class="min-w-0 truncate text-sm text-navy/80">Belum ada berkas dipilih</span></div><p id="foto-galat" class="text-sm text-status-hilang">Galat.</p></div>',
+};
+
+describe("AreaIsian & IsianBerkas: prop awalan (hal-08)", () => {
+  it("AreaIsian_tanpa_awalan_DOM_lama", () => {
+    const a = render(<AreaIsian id="alamat" label="Alamat" name="alamat" />);
+    expect(a.container.innerHTML).toBe(PATOKAN.AREA);
+    a.unmount();
+    const b = render(
+      <AreaIsian
+        id="alamat"
+        label="Alamat"
+        name="alamat"
+        required
+        galat="Alamat wajib diisi."
+        placeholder="X"
+      />,
+    );
+    expect(b.container.innerHTML).toBe(PATOKAN.AREA_GALAT);
+  });
+
+  it("IsianBerkas_tanpa_awalan_DOM_lama", () => {
+    const a = render(
+      <IsianBerkas
+        id="foto"
+        label="Foto"
+        name="foto"
+        berkas={null}
+        onPilih={() => {}}
+        teksTombol="Pilih Foto"
+        teksKosong="Belum ada foto dipilih"
+        keterangan="Ket."
+      />,
+    );
+    expect(a.container.innerHTML).toBe(PATOKAN.BERKAS);
+    a.unmount();
+    const b = render(
+      <IsianBerkas
+        id="foto"
+        label="Foto"
+        name="foto"
+        berkas={null}
+        onPilih={() => {}}
+        galat="Galat."
+      />,
+    );
+    expect(b.container.innerHTML).toBe(PATOKAN.BERKAS_GALAT);
+  });
+
+  it("AreaIsian_IsianBerkas_awalan_aria_hidden_dan_aria_input_tidak_berubah", () => {
+    const ikon = <svg data-uji="ikon" />;
+    const { container } = render(
+      <>
+        <AreaIsian id="alamat" label="Alamat" name="alamat" galat="Wajib." awalan={ikon} />
+        <IsianBerkas
+          id="foto"
+          label="Foto"
+          name="foto"
+          berkas={null}
+          onPilih={() => {}}
+          galat="Galat."
+          awalan={ikon}
+        />
+      </>,
+    );
+    const ikonAll = container.querySelectorAll('[data-uji="ikon"]');
+    expect(ikonAll.length).toBe(2);
+    for (const i of ikonAll) {
+      const bungkus = i.parentElement!;
+      expect(bungkus.getAttribute("aria-hidden")).toBe("true");
+      expect(bungkus.className).toContain("pointer-events-none");
+    }
+    const area = screen.getByLabelText("Alamat");
+    expect(area.getAttribute("aria-invalid")).toBe("true");
+    expect(area.getAttribute("aria-describedby")).toBe("alamat-galat");
+    expect(area.className).toContain("pl-11");
+    const berkas = screen.getByLabelText("Foto");
+    expect(berkas.getAttribute("aria-invalid")).toBe("true");
+    expect(berkas.getAttribute("aria-describedby")).toBe("foto-nama foto-galat");
+    expect(berkas.className).toContain("sr-only");
+  });
+});
+
 describe("lebar isian aman di layar sempit (360–414 px)", () => {
   it("Isian & AreaIsian: wrapper min-w-0, kontrol w-full min-w-0", () => {
     render(

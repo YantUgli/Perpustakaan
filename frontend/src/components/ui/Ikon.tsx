@@ -38,6 +38,33 @@ const PATH = {
       <path d="m3.5 3.5 17 17" />
     </>
   ),
+  /** Kartu identitas (isian NIK, hal-08). */
+  ktp: (
+    <>
+      <rect x="2.5" y="5" width="19" height="14" rx="2" />
+      <circle cx="8.5" cy="11" r="2" />
+      <path d="M5.5 16a3 3 0 0 1 6 0M14 10h4.5M14 13.5h3" />
+    </>
+  ),
+  /** Gagang telepon garis (isian telepon, hal-08). */
+  telepon: (
+    <path d="M6.2 2.75 9.1 2.5l1.7 4.4-2.2 1.75a12 12 0 0 0 6.75 6.75l1.75-2.2 4.4 1.7-.25 2.9a2.2 2.2 0 0 1-2.3 2A17 17 0 0 1 4.25 5.05a2.2 2.2 0 0 1 1.95-2.3Z" />
+  ),
+  /** Penanda lokasi garis (isian alamat, hal-08). */
+  pin: (
+    <>
+      <path d="M12 21.5s-7-7.6-7-12.5a7 7 0 0 1 14 0c0 4.9-7 12.5-7 12.5Z" />
+      <circle cx="12" cy="9" r="2.5" />
+    </>
+  ),
+  /** Gambar (isian foto, hal-08). */
+  gambar: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="9.5" r="1.75" />
+      <path d="m3.5 17.5 5-5 4 4 2.5-2.5 5.5 5" />
+    </>
+  ),
   /** Info dalam lingkaran (kotak keterangan, hal-07). */
   info: (
     <>
