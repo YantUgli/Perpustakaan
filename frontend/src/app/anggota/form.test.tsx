@@ -7,6 +7,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 const { FormProfil } = await import("./profil/FormProfil");
 const { FormPassword, PESAN_PASSWORD_BERHASIL } = await import("./profil/FormPassword");
+const { UbahFoto, PESAN_FOTO_BERHASIL, URL_FOTO } = await import("./profil/UbahFoto");
 
 const fetchPalsu = vi.fn();
 beforeEach(() => {
@@ -158,5 +159,153 @@ describe("FormPassword (FR-AKN-09, OQ-32)", () => {
     render(<FormPassword />);
     expect(screen.getByText("Minimal 8 karakter.")).toBeTruthy();
     expect(screen.queryByText(/huruf besar|karakter khusus|angka/i)).toBeNull();
+  });
+});
+
+describe("UbahFoto (OQ-48, NFR-SEC-06)", () => {
+  // jsdom tidak menyediakan object URL; pratinjau memakai URL palsu yang bisa dilacak.
+  let nomor = 0;
+  const dibuat: string[] = [];
+  const dibebaskan: string[] = [];
+  beforeEach(() => {
+    nomor = 0;
+    dibuat.length = 0;
+    dibebaskan.length = 0;
+    URL.createObjectURL = vi.fn(() => {
+      const u = `blob:pratinjau-${++nomor}`;
+      dibuat.push(u);
+      return u;
+    });
+    URL.revokeObjectURL = vi.fn((u: string) => void dibebaskan.push(u));
+  });
+
+  const berkas = (nama: string, jenis: string, ukuran = 1000) =>
+    new File([new Uint8Array(ukuran)], nama, { type: jenis });
+  const isianFoto = () => screen.getByLabelText("Foto Profil") as HTMLInputElement;
+  const pilih = (f: File) => fireEvent.change(isianFoto(), { target: { files: [f] } });
+  const avatar = () => screen.getByRole("img", { name: /Aulia Rahma/ });
+
+  it("OQ_48_ubah_foto_put_multipart_isian_foto", async () => {
+    fetchPalsu.mockResolvedValue(Response.json({ ...PROFIL, ada_foto: true }));
+    render(<UbahFoto nama="Aulia Rahma" adaFoto={false} />);
+    const f = berkas("saya.png", "image/png");
+    pilih(f);
+    // Pratinjau sebelum disimpan.
+    expect(avatar().getAttribute("src")).toBe("blob:pratinjau-1");
+    fireEvent.click(screen.getByRole("button", { name: "Simpan Foto" }));
+    expect(await screen.findByText(PESAN_FOTO_BERHASIL)).toBeTruthy();
+    const [url, init] = fetchPalsu.mock.calls[0];
+    expect(url).toBe("/api/v1/anggota/profil/foto");
+    expect(init.method).toBe("PUT");
+    expect(init.body).toBeInstanceOf(FormData);
+    expect([...(init.body as FormData).keys()]).toEqual(["foto"]);
+    expect((init.body as FormData).get("foto")).toBe(f);
+    expect(router.refresh).toHaveBeenCalled();
+    // Pesan sukses lewat komponen Pesan (status).
+    expect(screen.getByText(PESAN_FOTO_BERHASIL).closest('[role="status"]')).not.toBeNull();
+  });
+
+  it("OQ_48_sukses_avatar_dimuat_ulang_dengan_penanda_versi", async () => {
+    fetchPalsu.mockResolvedValue(Response.json({ ...PROFIL, ada_foto: true }));
+    render(<UbahFoto nama="Aulia Rahma" adaFoto={true} />);
+    expect(avatar().getAttribute("src")).toBe(URL_FOTO);
+    pilih(berkas("baru.jpg", "image/jpeg"));
+    fireEvent.click(screen.getByRole("button", { name: "Simpan Foto" }));
+    await screen.findByText(PESAN_FOTO_BERHASIL);
+    expect(avatar().getAttribute("src")).toMatch(/^\/api\/v1\/anggota\/profil\/foto\?v=\d+$/);
+    // Pratinjau dibebaskan setelah selesai; tombol simpan/batal hilang.
+    expect(dibebaskan).toEqual(["blob:pratinjau-1"]);
+    expect(screen.queryByRole("button", { name: "Simpan Foto" })).toBeNull();
+  });
+
+  it("OQ_48_avatar_gagal_lalu_unggah_sukses_foto_baru_tampil_bukan_inisial", async () => {
+    fetchPalsu.mockResolvedValue(Response.json({ ...PROFIL, ada_foto: true }));
+    render(<UbahFoto nama="Aulia Rahma" adaFoto={true} />);
+    // Foto lama gagal dimuat → AvatarFoto jatuh ke inisial.
+    fireEvent.error(avatar());
+    expect(avatar().tagName).toBe("SPAN");
+    expect(avatar().textContent).toBe("AR");
+    pilih(berkas("baru.jpg", "image/jpeg"));
+    fireEvent.click(screen.getByRole("button", { name: "Simpan Foto" }));
+    await screen.findByText(PESAN_FOTO_BERHASIL);
+    // key={src}: state `gagal` lama tidak terbawa → foto baru tampil.
+    expect(avatar().tagName).toBe("IMG");
+    expect(avatar().getAttribute("src")).toMatch(/\?v=\d+$/);
+  });
+
+  it("OQ_48_foto_terlalu_besar_ditahan_klien", () => {
+    render(<UbahFoto nama="Aulia Rahma" adaFoto={false} />);
+    pilih(berkas("besar.jpg", "image/jpeg", 2 * 1024 * 1024 + 1));
+    expect(screen.getByText("Ukuran berkas melebihi batas 2 MB.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Simpan Foto" })).toBeNull();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(fetchPalsu).not.toHaveBeenCalled();
+  });
+
+  it("OQ_48_tepat_2_mb_diterima_klien", () => {
+    render(<UbahFoto nama="Aulia Rahma" adaFoto={false} />);
+    pilih(berkas("pas.jpg", "image/jpeg", 2 * 1024 * 1024));
+    expect(screen.getByRole("button", { name: "Simpan Foto" })).toBeTruthy();
+  });
+
+  it("OQ_48_jenis_bukan_jpg_png_ditahan_hanya_bila_type_terisi", () => {
+    render(<UbahFoto nama="Aulia Rahma" adaFoto={false} />);
+    pilih(berkas("animasi.gif", "image/gif"));
+    expect(screen.getByText("Foto harus berupa gambar JPG atau PNG.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Simpan Foto" })).toBeNull();
+    // Jenis kosong → dikirim; backend memeriksa isi berkas (P3).
+    pilih(berkas("tanpa-jenis", ""));
+    expect(screen.queryByText("Foto harus berupa gambar JPG atau PNG.")).toBeNull();
+    expect(screen.getByRole("button", { name: "Simpan Foto" })).toBeTruthy();
+  });
+
+  it("OQ_48_galat_backend_apa_adanya", async () => {
+    fetchPalsu.mockResolvedValue(
+      galat(422, "AKN_FOTO_FORMAT", "Foto harus berupa gambar JPG atau PNG.", {
+        foto: "Foto harus berupa gambar JPG atau PNG.",
+      }),
+    );
+    render(<UbahFoto nama="Aulia Rahma" adaFoto={false} />);
+    pilih(berkas("palsu.png", "image/png"));
+    fireEvent.click(screen.getByRole("button", { name: "Simpan Foto" }));
+    const pesan = await screen.findAllByText("Foto harus berupa gambar JPG atau PNG.");
+    expect(pesan.some((p) => p.closest('[role="alert"]'))).toBe(true);
+    expect(isianFoto().getAttribute("aria-invalid")).toBe("true");
+    expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("OQ_48_galat_503_penyimpanan_apa_adanya", async () => {
+    const teks = "Berkas tidak dapat disimpan. Coba lagi nanti.";
+    fetchPalsu.mockResolvedValue(
+      Response.json(
+        { detail: { kode: "BERKAS_PENYIMPANAN_GAGAL", pesan: teks, rujukan: "NFR-REL-01" } },
+        { status: 503 },
+      ),
+    );
+    render(<UbahFoto nama="Aulia Rahma" adaFoto={true} />);
+    pilih(berkas("baru.jpg", "image/jpeg"));
+    fireEvent.click(screen.getByRole("button", { name: "Simpan Foto" }));
+    expect(await screen.findByText(teks)).toBeTruthy();
+    // Pratinjau tetap; avatar belum berganti ke URL server baru.
+    expect(avatar().getAttribute("src")).toBe("blob:pratinjau-1");
+  });
+
+  it("OQ_48_batal_kembali_ke_foto_lama", () => {
+    render(<UbahFoto nama="Aulia Rahma" adaFoto={true} />);
+    pilih(berkas("baru.jpg", "image/jpeg"));
+    expect(avatar().getAttribute("src")).toBe("blob:pratinjau-1");
+    fireEvent.click(screen.getByRole("button", { name: "Batal" }));
+    expect(avatar().getAttribute("src")).toBe(URL_FOTO);
+    expect(dibebaskan).toEqual(["blob:pratinjau-1"]);
+    expect(screen.getByText("Belum ada foto baru dipilih")).toBeTruthy();
+    expect(fetchPalsu).not.toHaveBeenCalled();
+  });
+
+  it("OQ_48_pratinjau_dibebaskan_saat_unmount_dan_tanpa_hapus_foto", () => {
+    const { unmount } = render(<UbahFoto nama="Aulia Rahma" adaFoto={false} />);
+    expect(screen.queryByRole("button", { name: /hapus/i })).toBeNull();
+    pilih(berkas("baru.png", "image/png"));
+    unmount();
+    expect(dibebaskan).toEqual(["blob:pratinjau-1"]);
   });
 });

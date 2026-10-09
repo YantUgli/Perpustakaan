@@ -64,14 +64,21 @@ export function validasiDaftar(n: NilaiDaftar): Record<string, string> {
   if (n.password && n.password.length < PANJANG_MIN_PASSWORD) galat.password = PESAN_AKUN.password;
 
   if (n.foto) {
-    if (n.foto.size > UKURAN_MAKS_FOTO) {
-      galat.foto = PESAN_AKUN.fotoTerlaluBesar;
-    } else if (n.foto.type && !JENIS_FOTO.has(n.foto.type)) {
-      // P3: tahan hanya bila jenis diketahui dan bukan JPG/PNG; jenis kosong → backend memeriksa isi berkas.
-      galat.foto = PESAN_AKUN.fotoFormat;
-    }
+    const galatFoto = validasiFoto(n.foto);
+    if (galatFoto) galat.foto = galatFoto;
   }
   return galat;
+}
+
+/**
+ * NFR-SEC-06: foto anggota saat daftar (FR-AKN-01) dan saat diganti di Profil (OQ-48). Ukuran > 2.097.152 byte
+ * ditahan; jenis hanya ditahan bila `File.type` terisi dan bukan JPG/PNG (P3) — jenis kosong → backend memeriksa
+ * isi berkas. Pesan identik dengan backend (`berkas.py`).
+ */
+export function validasiFoto(foto: File): string | undefined {
+  if (foto.size > UKURAN_MAKS_FOTO) return PESAN_AKUN.fotoTerlaluBesar;
+  if (foto.type && !JENIS_FOTO.has(foto.type)) return PESAN_AKUN.fotoFormat;
+  return undefined;
 }
 
 /** Login hanya memeriksa isian wajib; kecocokan kredensial diputuskan backend (OQ-16). */
@@ -82,7 +89,10 @@ export function validasiMasuk(n: { email: string; password: string }): Record<st
   return galat;
 }
 
-/** FR-AKN-07/08: ubah data diri (NIK & foto tidak dapat diubah, K-05). Pesan sama dengan backend `anggota.py`. */
+/**
+ * FR-AKN-07/08: ubah data diri. NIK tidak dapat diubah; foto lewat endpoint terpisah (OQ-48). Pesan sama dengan
+ * backend `anggota.py`.
+ */
 export function validasiProfil(n: {
   nama: string;
   alamat: string;

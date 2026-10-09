@@ -160,6 +160,20 @@ describe("Detail anggota (FR-AKN-10, OQ-33)", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("FR_AKN_11_OQ_48_admin_tidak_dapat_mengubah_foto", async () => {
+    // OQ-48 hanya untuk anggota sendiri; detail & ubah anggota admin tanpa unggah foto.
+    respons.set("/admin/anggota/AGT-000001", { ...AULIA, ada_foto: true });
+    const { container, unmount } = render(
+      await DetailAnggota({ params: Promise.resolve({ kode: "AGT-000001" }) }),
+    );
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+    expect(screen.queryByText(/Ubah Foto/)).toBeNull();
+    expect(screen.getByText("NIK dan foto tidak dapat diubah.")).toBeTruthy();
+    unmount();
+    const ubah = render(<FormUbahAnggota awal={AULIA} />);
+    expect(ubah.container.querySelector('input[type="file"]')).toBeNull();
+  });
+
   it("OQ_42_detail_admin_ada_foto_true_img_dari_endpoint_admin", async () => {
     respons.set("/admin/anggota/AGT-000001", { ...AULIA, ada_foto: true });
     render(await DetailAnggota({ params: Promise.resolve({ kode: "AGT-000001" }) }));

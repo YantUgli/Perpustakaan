@@ -1164,12 +1164,16 @@ describe("Profil (FR-AKN-07, K-05; hal-16/17 satu halaman)", () => {
   beforeEach(() => respons.set(RIWAYAT_TOTAL, halaman([], 12)));
   const kartuKiri = () => screen.getByRole("region", { name: "Ringkasan profil" });
 
-  it("K_05_nik_foto_tidak_bisa_diubah (NIK tampil utuh, bukan isian)", async () => {
+  it("K_05_nik_tidak_bisa_diubah (NIK tampil utuh, bukan isian; foto lewat OQ-48)", async () => {
     respons.set("/anggota/profil", PROFIL_AULIA);
-    render(await HalamanProfil());
+    const { container } = render(await HalamanProfil());
     expect(screen.getByText("3171012345678901")).toBeTruthy(); // P3: tidak disamarkan
     expect(screen.queryByLabelText(/NIK/)).toBeNull();
-    expect(screen.queryByLabelText(/foto/i)).toBeNull();
+    // OQ-48 (09/10/2026): satu-satunya isian foto = unggah foto sendiri di kartu kiri, di luar kedua form data.
+    const isianFoto = container.querySelectorAll('input[type="file"]');
+    expect(isianFoto).toHaveLength(1);
+    expect(isianFoto[0].closest("form")).toBeNull();
+    expect(kartuKiri().contains(isianFoto[0])).toBe(true);
     expect(screen.getByText("12/01/2026")).toBeTruthy();
     expect(screen.getByRole("img", { name: "Aulia Rahma" }).textContent).toBe("AR"); // OQ-42
   });
@@ -1232,15 +1236,16 @@ describe("Profil (FR-AKN-07, K-05; hal-16/17 satu halaman)", () => {
     ).toBeTruthy();
   });
 
-  it("OQ_48_tanpa_kalimat_foto_tidak_dapat_diubah_dan_foto_sekali", async () => {
+  it("OQ_48_tanpa_kalimat_foto_tidak_dapat_diubah_foto_sekali_dan_tombol_ubah_foto", async () => {
     respons.set("/anggota/profil", { ...PROFIL_AULIA, ada_foto: true });
     const { container } = render(await HalamanProfil());
     expect(container.textContent).not.toMatch(/foto[^.]*tidak dapat diubah/i);
     expect(container.querySelectorAll('img[src="/api/v1/anggota/profil/foto"]')).toHaveLength(1);
     expect(within(kartuKiri()).getByRole("img", { name: "Foto Aulia Rahma" })).toBeTruthy();
-    // Tombol "Ubah Foto" menyusul setelah endpoint OQ-48; belum ada sekarang.
-    expect(screen.queryByRole("button", { name: /foto/i })).toBeNull();
-    expect(container.querySelector('input[type="file"]')).toBeNull();
+    // OQ-48: unggah foto hanya di kartu kiri; tanpa tombol hapus foto.
+    expect(within(kartuKiri()).getByText("Ubah Foto")).toBeTruthy();
+    expect(container.querySelectorAll('input[type="file"]')).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /hapus/i })).toBeNull();
   });
 
   it("ringkasan_kiri_id_tanggal_bergabung_tanpa_lencana_aktif_dan_jenis", async () => {

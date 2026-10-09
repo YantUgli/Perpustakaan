@@ -167,6 +167,16 @@ describe("FormDaftar (FR-AKN-01..04)", () => {
     expect(fetchPalsu).not.toHaveBeenCalled();
   });
 
+  it("OQ_48_keterangan_foto_dapat_diganti_dari_profil", () => {
+    render(<FormDaftar />);
+    expect(
+      screen.getByText(
+        "Format JPG atau PNG, maksimal 2 MB. Foto dapat diganti nanti dari halaman Profil.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/tidak dapat diubah/)).toBeNull();
+  });
+
   it("NFR_SEC_02_keterangan_password_minimal_8 (bukan 6 seperti desain)", () => {
     render(<FormDaftar />);
     expect(screen.getByText("Minimal 8 karakter.")).toBeTruthy();
