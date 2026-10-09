@@ -1,14 +1,14 @@
-"""Router area anggota: profil (FR-AKN-07..09) dan foto sendiri (OQ-42). Didaftarkan ke
-`router_anggota` (NFR-SEC-03).
+"""Router area anggota: profil (FR-AKN-07..09) dan foto sendiri (lihat OQ-42, ganti OQ-48).
+Didaftarkan ke `router_anggota` (NFR-SEC-03).
 
 Identitas anggota selalu dari sesi; tidak ada parameter path/body berisi id atau kode anggota.
-Foto hanya dibaca (GET); sengaja TIDAK ada: ubah NIK/foto (K-05), unggah ulang foto, lupa password
+Sengaja TIDAK ada: ubah NIK, hapus foto, ubah foto lewat data diri (`extra="forbid"`), lupa password
 mandiri (K-03).
 """
 
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, Response
+from fastapi import APIRouter, Cookie, Depends, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from app.api.deps import butuh_anggota
@@ -40,6 +40,13 @@ def foto(db: DB, saya: Anggota) -> Response:
         media_type=berkas.media_type,
         headers={"Cache-Control": layanan.CACHE_CONTROL_FOTO},
     )
+
+
+@router.put("/foto", response_model=ProfilKeluar)
+def ganti_foto(foto: UploadFile, db: DB, saya: Anggota):
+    """OQ-48: anggota menambah atau mengganti foto sendiri; identitas dari sesi.
+    JPG/PNG ≤ 2 MB, diperiksa dari isi berkas (NFR-SEC-06). Nama berkas dari klien diabaikan."""
+    return ProfilKeluar.dari(layanan.ganti_foto_sendiri(db, saya.id, foto.file))
 
 
 @router.put("", response_model=ProfilKeluar)

@@ -1,15 +1,19 @@
 """Profil anggota & pengelolaan anggota oleh admin: FR-AKN-07..11, K-03, K-05, K-06, OQ-32, OQ-33.
 
-NIK dan foto tidak pernah diubah di sini (K-05; isian asing ditolak schema `extra="forbid"`).
-Foto hanya dibaca untuk pemiliknya dan admin (OQ-42), lewat `berkas.berkas_tersimpan()` yang sama
-dengan cover publik: path hanya dari DB, wajib di dalam `STORAGE_DIR`, Content-Type dari ekstensi.
+NIK tidak pernah diubah; foto tidak diubah lewat data diri (isian asing ditolak schema
+`extra="forbid"`). Foto hanya dibaca untuk pemiliknya dan admin (OQ-42), lewat
+`berkas.berkas_tersimpan()` yang sama dengan cover publik: path hanya dari DB, wajib di dalam
+`STORAGE_DIR`, Content-Type dari ekstensi. Hanya anggota yang dapat mengganti fotonya sendiri lewat
+`ganti_foto_sendiri` (OQ-48, CR yang mengubah K-05); admin tidak (FR-AKN-11).
 Email diperiksa dengan helper yang sama dengan pendaftaran: lintas admin–anggota, tak peka huruf,
 pesan tidak membedakan admin/anggota (OQ-02, OQ-09). Password tidak di-trim dan tidak pernah
 keluar dari fungsi ini selain sebagai hash argon2id (NFR-SEC-01).
 """
 
+import logging
 from dataclasses import dataclass
 from datetime import date
+from typing import BinaryIO
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -32,6 +36,7 @@ _LABEL = pendaftaran.LABEL_ISIAN | {
 }
 _CONSTRAINT_EMAIL = "uq_anggota_email_lower"
 _PESAN_PASSWORD_LAMA = {"kosong": "Password lama wajib diisi.", "salah": "Password lama salah."}
+log = logging.getLogger(__name__)
 # OQ-42 (keputusan Ayen 2026-10-07): foto = data pribadi; tidak disimpan cache bersama/perangkat.
 CACHE_CONTROL_FOTO = "private, no-store"
 
@@ -249,6 +254,37 @@ def ganti_password(
     except BaseException:
         db.rollback()
         raise
+
+
+def ganti_foto_sendiri(db: Session, anggota_id: int, unggahan: BinaryIO) -> ProfilAnggota:
+    """ASUMSI(OQ-48): anggota menambah/mengganti foto sendiri (`anggota_id` dari sesi, NFR-SEC-03).
+
+    NFR-SEC-06: JPG/PNG ≤ 2 MB dari isi berkas (kode `AKN_FOTO_*`). NFR-REL-01: objek baru disimpan
+    lebih dulu (gangguan → 503 sebelum DB berubah); commit gagal → objek baru dibuang; objek lama
+    dihapus setelah commit dan kegagalannya hanya dicatat (objek yatim). NFR-REL-02: baris anggota
+    dikunci dan foto lama dibaca setelah kunci, sehingga unggahan bersamaan tidak meninggalkan
+    `foto_path` yang menunjuk objek terhapus. Sesi tidak dicabut."""
+    gambar = berkas.periksa_gambar(unggahan, label="Foto", prefiks="AKN_FOTO")
+    path_baru = berkas.simpan(gambar, "foto")
+    try:
+        a = db.scalars(
+            select(Anggota)
+            .where(Anggota.id == anggota_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ).one()
+        path_lama = a.foto_path
+        a.foto_path = path_baru
+        db.commit()
+    except Exception:
+        db.rollback()
+        berkas.hapus(path_baru)
+        raise
+    try:
+        berkas.hapus(path_lama)
+    except OSError as exc:  # ASUMSI(OQ-48): mode lokal; supabase sudah menelan gangguannya sendiri
+        log.warning("Foto lama anggota gagal dihapus (objek yatim): %s", type(exc).__name__)
+    return _profil(a)
 
 
 # --------------------------------------------------------------------------------------- admin

@@ -211,13 +211,15 @@ def test_OQ_42_ada_foto_true_false(client, db: Session, penyimpanan_sementara: P
 # ---------------------------------------------------------------------------------- audit route
 
 
-def test_OQ_42_K_05_tidak_ada_route_tulis_foto():
-    """Foto hanya dibaca: tidak ada unggah ulang/ubah/hapus (K-05), dan tidak ada yang publik."""
+def test_OQ_42_OQ_48_route_foto_hanya_get_dan_put_milik_anggota():
+    """Foto dibaca pemilik & admin (OQ-42); hanya anggota yang dapat mengganti fotonya sendiri
+    (OQ-48, mengubah K-05); admin tidak dapat mengubah (FR-AKN-11); tanpa hapus; tidak publik."""
     route_foto = {
         (m, r.path) for r in _route_aplikasi_sungguhan() for m in r.methods if "foto" in r.path
     }
     assert route_foto == {
         ("GET", "/api/v1/anggota/profil/foto"),
+        ("PUT", "/api/v1/anggota/profil/foto"),
         ("GET", "/api/v1/admin/anggota/{kode}/foto"),
     }
     assert not route_foto & ROUTE_PUBLIK
