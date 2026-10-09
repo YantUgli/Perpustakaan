@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.schemas.katalog import HalamanKatalog, JudulKatalogKeluar
+from app.schemas.katalog import HalamanKatalog, JudulKatalogDetailKeluar, JudulKatalogKeluar
 from app.schemas.koleksi import KategoriKeluar
 from app.services import katalog, koleksi
 
@@ -55,9 +55,9 @@ def cari_judul(
     )
 
 
-@router.get("/judul/{judul_id}", response_model=JudulKatalogKeluar)
+@router.get("/judul/{judul_id}", response_model=JudulKatalogDetailKeluar)
 def detail_judul(judul_id: int, db: DB):
-    return JudulKatalogKeluar.dari(katalog.detail_judul(db, judul_id))
+    return JudulKatalogDetailKeluar.dari(katalog.detail_judul(db, judul_id))
 
 
 @router.get(

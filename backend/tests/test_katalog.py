@@ -651,3 +651,26 @@ def test_OQ_43_kategori_tanpa_filter(client, db: Session, params):
 @pytest.mark.parametrize("method", ["post", "put", "delete"])
 def test_OQ_43_kategori_publik_hanya_baca(client, method):
     assert getattr(client, method)(API_KATEGORI).status_code == 405
+
+
+# --------------------------------------------------------------------- deskripsi judul (OQ-46, CR)
+
+
+def test_OQ_46_detail_katalog_memuat_deskripsi(client, db: Session):
+    j = pabrik.judul(db, deskripsi="Paragraf satu.\n\nParagraf dua.")
+    tanpa = pabrik.judul(db)
+    assert client.get(f"{API}/{j.id}").json()["deskripsi"] == "Paragraf satu.\n\nParagraf dua."
+    assert client.get(f"{API}/{tanpa.id}").json()["deskripsi"] is None
+
+
+def test_OQ_46_daftar_katalog_tanpa_deskripsi(client, db: Session):
+    p = _penanda()
+    pabrik.judul(db, judul=f"Buku {p}", deskripsi="Sinopsis.")
+    (b,) = _cari(client, p)["data"]
+    assert "deskripsi" not in b
+
+
+def test_OQ_46_OQ_24_pencarian_tidak_mencocokkan_deskripsi(client, db: Session):
+    p = _penanda()
+    pabrik.judul(db, deskripsi=f"Kisah tentang {p} di Hogwarts.")
+    assert _cari(client, p)["total"] == 0

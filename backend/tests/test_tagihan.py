@@ -441,7 +441,8 @@ def test_NFR_MNT_01_downgrade_migration_menghapus_trigger_dan_fungsi(engine: Eng
         " (SELECT count(*) FROM pg_proc WHERE proname = 'tolak_ubah_tagihan_lunas')"
     )
     try:
-        command.downgrade(cfg, "-1")
+        # Revisi sebelum 485a69c0f745 (trigger), bukan "-1": migration baru bisa berada di atasnya.
+        command.downgrade(cfg, "8ead55e364f2")
         with engine.connect() as k:
             assert tuple(k.execute(text(tanya)).one()) == (0, 0)
     finally:

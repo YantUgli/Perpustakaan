@@ -41,6 +41,8 @@ class JudulMasuk(BaseModel):
     tahun: StrictInt
     kategori_id: StrictInt
     harga: StrictInt  # Rupiah bulat; pecahan/teks/boolean ditolak (DR-05)
+    # ASUMSI(OQ-46): opsional; tidak dikirim pada PUT = tidak diubah, null/"" = dikosongkan
+    deskripsi: str | None = None
 
 
 class JudulKeluar(_DariORM):
@@ -53,6 +55,7 @@ class JudulKeluar(_DariORM):
     kategori: KategoriKeluar
     harga: int
     cover_path: str | None  # relatif terhadap STORAGE_DIR
+    deskripsi: str | None  # OQ-46
 
     @computed_field
     @property

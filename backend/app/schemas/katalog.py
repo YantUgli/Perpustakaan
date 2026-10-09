@@ -44,6 +44,17 @@ class JudulKatalogKeluar(BaseModel):
         )
 
 
+class JudulKatalogDetailKeluar(JudulKatalogKeluar):
+    """Detail satu judul: isian daftar katalog ditambah deskripsi (OQ-46, hanya di detail)."""
+
+    deskripsi: str | None  # None → frontend tidak menampilkan bagian deskripsi
+
+    @classmethod
+    def dari(cls, item: JudulKatalog) -> "JudulKatalogDetailKeluar":
+        dasar = JudulKatalogKeluar.dari(item).model_dump()
+        return cls(**dasar, deskripsi=item.judul.deskripsi)
+
+
 class HalamanKatalog(BaseModel):
     data: list[JudulKatalogKeluar]
     total: int

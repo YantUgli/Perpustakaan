@@ -409,3 +409,68 @@ def test_404_judul_kategori_rak_tidak_ada(klien_admin):
 def test_DR_05_kolom_isbn_normal_adalah_kolom_generated(engine):
     kolom = {c["name"]: c for c in inspect(engine).get_columns("judul_buku")}
     assert "computed" in kolom["isbn_normal"]
+
+
+# ------------------------------------------------------------------- deskripsi judul (OQ-46, CR)
+
+
+def test_OQ_46_tambah_judul_dengan_deskripsi_disimpan_trim_baris_baru_tetap(klien_admin, db):
+    teks = "  Paragraf satu.\n\nParagraf dua.  "
+    r = klien_admin.post(f"{API}/judul", json=_judul_json(db, deskripsi=teks))
+    assert r.status_code == 201, r.text
+    assert r.json()["deskripsi"] == "Paragraf satu.\n\nParagraf dua."
+    assert db.get(JudulBuku, r.json()["id"]).deskripsi == "Paragraf satu.\n\nParagraf dua."
+    detail = klien_admin.get(f"{API}/judul/{r.json()['id']}").json()
+    assert detail["deskripsi"] == "Paragraf satu.\n\nParagraf dua."
+
+
+def test_OQ_46_tanpa_deskripsi_tetap_sah_dan_null(klien_admin, db):
+    r = klien_admin.post(f"{API}/judul", json=_judul_json(db))
+    assert r.status_code == 201, r.text
+    assert r.json()["deskripsi"] is None
+
+
+@pytest.mark.parametrize("teks", ["", "   ", "\n\t "])
+def test_OQ_46_deskripsi_kosong_atau_spasi_disimpan_null(klien_admin, db, teks):
+    r = klien_admin.post(f"{API}/judul", json=_judul_json(db, deskripsi=teks))
+    assert r.status_code == 201, r.text
+    assert r.json()["deskripsi"] is None
+    assert db.get(JudulBuku, r.json()["id"]).deskripsi is None
+
+
+def test_OQ_46_deskripsi_tepat_batas_diterima(klien_admin, db):
+    teks = "a" * 2000
+    r = klien_admin.post(f"{API}/judul", json=_judul_json(db, deskripsi=f"  {teks}  "))
+    assert r.status_code == 201, r.text  # dihitung setelah trim
+    assert r.json()["deskripsi"] == teks
+
+
+def test_OQ_46_deskripsi_melebihi_batas_ditolak_pesan_menyebut_batas(klien_admin, db):
+    r = klien_admin.post(f"{API}/judul", json=_judul_json(db, deskripsi="a" * 2001))
+    d = _galat(r, 422, "BKU_DESKRIPSI_TERLALU_PANJANG")
+    assert d["pesan"] == "Deskripsi maksimal 2.000 karakter (saat ini 2.001)."
+    assert d["rujukan"] == "OQ-46"
+    assert d["isian"] == {"deskripsi": d["pesan"]}
+    assert db.scalar(select(func.count()).select_from(JudulBuku)) == 0
+
+
+def test_OQ_46_ubah_judul_tanpa_isian_deskripsi_mempertahankan_nilai(klien_admin, db):
+    j = pabrik.judul(db, deskripsi="Sinopsis lama.")
+    r = klien_admin.put(f"{API}/judul/{j.id}", json=_judul_json(db, harga=120_000))
+    assert r.status_code == 200, r.text
+    assert (r.json()["harga"], r.json()["deskripsi"]) == (120_000, "Sinopsis lama.")
+
+
+def test_OQ_46_ubah_judul_deskripsi_baru_menggantikan(klien_admin, db):
+    j = pabrik.judul(db, deskripsi="Sinopsis lama.")
+    r = klien_admin.put(f"{API}/judul/{j.id}", json=_judul_json(db, deskripsi=" Sinopsis baru. "))
+    assert r.status_code == 200, r.text
+    assert r.json()["deskripsi"] == "Sinopsis baru."
+
+
+@pytest.mark.parametrize("nilai", [None, "", "  "])
+def test_OQ_46_ubah_judul_deskripsi_null_atau_kosong_mengosongkan(klien_admin, db, nilai):
+    j = pabrik.judul(db, deskripsi="Sinopsis lama.")
+    r = klien_admin.put(f"{API}/judul/{j.id}", json=_judul_json(db, deskripsi=nilai))
+    assert r.status_code == 200, r.text
+    assert r.json()["deskripsi"] is None
