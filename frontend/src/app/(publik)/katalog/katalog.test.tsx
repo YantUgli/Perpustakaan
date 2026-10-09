@@ -177,9 +177,16 @@ describe("Katalog /katalog (FR-KTL-01/02/04, IR-UI-05)", () => {
   });
 });
 
-describe("Detail /katalog/[id] (FR-KTL-01/03)", () => {
+describe("Detail /katalog/[id] (FR-KTL-01/03, hal-05)", () => {
+  // OQ-46: detail memuat `deskripsi`; OQ-47: judul sekategori dari `kategori_id` (OQ-44), per_halaman 7.
+  const DETAIL = { ...JUDUL, deskripsi: "Paragraf pertama.\nParagraf kedua." };
+  const DETAIL_KOSONG = { ...KOSONG_EKSEMPLAR, deskripsi: null };
+  const SEKATEGORI = "/katalog/judul?kategori_id=3&per_halaman=7";
+  const lain = (id: number) => ({ ...JUDUL, id, judul: `Judul Lain ${id}` });
+
   it("FR_KTL_03_detail_x_dari_y_dan_OQ_22_rak_kode_plus_lokasi", async () => {
-    respons.set("/katalog/judul/7", JUDUL);
+    respons.set("/katalog/judul/7", DETAIL);
+    respons.set(SEKATEGORI, halamanKatalog([]));
     render(await DetailBuku(detail("7")));
     expect(screen.getByRole("heading", { level: 1, name: "Langit yang Sama" })).toBeTruthy();
     expect(screen.getByText("2 dari 5 eksemplar tersedia")).toBeTruthy();
@@ -187,19 +194,120 @@ describe("Detail /katalog/[id] (FR-KTL-01/03)", () => {
     expect(screen.getByText("R-02")).toBeTruthy();
     expect(screen.getByText("Rp98.000")).toBeTruthy();
     expect(screen.getByText("978-602-03-1234-5")).toBeTruthy();
-    // BR-07, keputusan review: tanpa angka batas pinjam / lama pinjam.
-    const info = screen.getByText(/Peminjaman dilayani petugas/);
+    // Breadcrumb hal-05: item terakhir "Detail Buku"; judul tetap di h1.
+    const remah = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(within(remah).getByRole("link", { name: "Beranda" }).getAttribute("href")).toBe("/");
+    expect(within(remah).getByText("Detail Buku").getAttribute("aria-current")).toBe("page");
+  });
+
+  it("BR_07_info_peminjaman_teks_baru_tanpa_angka", async () => {
+    respons.set("/katalog/judul/7", DETAIL);
+    respons.set(SEKATEGORI, halamanKatalog([]));
+    render(await DetailBuku(detail("7")));
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Peminjaman melalui petugas perpustakaan" }),
+    ).toBeTruthy();
+    const info = screen.getByText(/Kunjungi perpustakaan/);
     expect(info.textContent).toBe(
-      "Peminjaman dilayani petugas di perpustakaan dengan menunjukkan QR anggota.",
+      "Kunjungi perpustakaan dan tunjukkan QR anggota kepada petugas. Peminjaman tidak dapat dilakukan secara online.",
     );
+    expect(info.textContent).not.toMatch(/\d/);
+  });
+
+  it("FR_KTL_03_kotak_ketersediaan_besar_hijau_bila_ada_gold_bila_0", async () => {
+    respons.set("/katalog/judul/7", DETAIL);
+    respons.set(SEKATEGORI, halamanKatalog([]));
+    render(await DetailBuku(detail("7")));
+    const ada = screen.getByText("2 dari 5 eksemplar tersedia");
+    expect(ada.getAttribute("data-tersedia")).toBe("ya");
+    expect(ada.className).toContain("bg-status-tersedia-bg");
+    expect(ada.className).toContain("text-lg");
+    // Keputusan 1 (09/10/2026): tanpa pil "Tersedia".
+    expect(screen.queryByText("Tersedia", { exact: true })).toBeNull();
+    cleanup();
+
+    respons.set("/katalog/judul/8", DETAIL_KOSONG);
+    render(await DetailBuku(detail("8")));
+    const kosong = screen.getByText("0 dari 0 eksemplar tersedia");
+    expect(kosong.getAttribute("data-tersedia")).toBe("tidak");
+    expect(kosong.className).not.toContain("status-tersedia");
+    expect(kosong.className).toContain("text-gold-700");
+    expect(kosong.className).toContain("bg-surface");
   });
 
   it("OQ_23_detail_0_dari_0_dan_gambar_pengganti", async () => {
-    respons.set("/katalog/judul/8", KOSONG_EKSEMPLAR);
+    respons.set("/katalog/judul/8", DETAIL_KOSONG);
+    respons.set(SEKATEGORI, halamanKatalog([]));
     const { container } = render(await DetailBuku(detail("8")));
     expect(screen.getByText("0 dari 0 eksemplar tersedia")).toBeTruthy();
     expect(container.querySelector("img")).toBeNull();
     expect(container.querySelector('[data-cover="pengganti"]')).not.toBeNull();
+    // Rak kosong → "—".
+    expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("OQ_46_sinopsis_tampil_dengan_baris_baru", async () => {
+    respons.set("/katalog/judul/7", { ...DETAIL, deskripsi: "Baris <b>satu</b>.\nBaris dua." });
+    respons.set(SEKATEGORI, halamanKatalog([]));
+    const { container } = render(await DetailBuku(detail("7")));
+    const bagian = screen.getByRole("region", { name: "Sinopsis" });
+    const p = bagian.querySelector("p")!;
+    // Teks apa adanya (tanpa HTML), baris baru dipertahankan lewat whitespace-pre-line.
+    expect(p.textContent).toBe("Baris <b>satu</b>.\nBaris dua.");
+    expect(p.className).toContain("whitespace-pre-line");
+    expect(container.querySelector("b")).toBeNull();
+  });
+
+  it("OQ_46_tanpa_deskripsi_bagian_sinopsis_tidak_tampil", async () => {
+    respons.set("/katalog/judul/8", DETAIL_KOSONG);
+    respons.set(SEKATEGORI, halamanKatalog([]));
+    render(await DetailBuku(detail("8")));
+    expect(screen.queryByText("Sinopsis")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Sinopsis" })).toBeNull();
+  });
+
+  it("OQ_47_buku_sekategori_tanpa_judul_ini_maks_6", async () => {
+    respons.set("/katalog/judul/7", DETAIL);
+    // Urutan API (A–Z) dipertahankan; judul yang sedang dibuka dibuang; sisanya dipotong 6.
+    respons.set(
+      SEKATEGORI,
+      halamanKatalog([lain(1), JUDUL, lain(2), lain(3), lain(4), lain(5), lain(6)]),
+    );
+    render(await DetailBuku(detail("7")));
+    expect(dipanggil).toEqual(["/katalog/judul/7", SEKATEGORI]);
+    const bagian = screen.getByRole("region", { name: "Buku Lain dalam Kategori Sejarah" });
+    const judul = within(bagian)
+      .getAllByRole("heading", { level: 3 })
+      .map((h) => h.textContent);
+    expect(judul).toEqual([1, 2, 3, 4, 5, 6].map((i) => `Judul Lain ${i}`));
+    expect(within(bagian).queryByText("Langit yang Sama")).toBeNull();
+    // Tanpa bookmark.
+    expect(within(bagian).queryByRole("button")).toBeNull();
+  });
+
+  it("OQ_47_tanpa_judul_lain_bagian_tidak_tampil", async () => {
+    respons.set("/katalog/judul/7", DETAIL);
+    respons.set(SEKATEGORI, halamanKatalog([JUDUL]));
+    render(await DetailBuku(detail("7")));
+    expect(screen.queryByText(/Buku Lain dalam Kategori/)).toBeNull();
+  });
+
+  it("OQ_47_galat_sekategori_detail_tetap_tampil", async () => {
+    respons.set("/katalog/judul/7", DETAIL);
+    respons.set(SEKATEGORI, new GalatApi(500, "SISTEM", "x", null, {}, true));
+    render(await DetailBuku(detail("7")));
+    expect(screen.getByRole("heading", { level: 1, name: "Langit yang Sama" })).toBeTruthy();
+    expect(screen.queryByText(/Buku Lain dalam Kategori/)).toBeNull();
+  });
+
+  it("OQ_47_tautan_lihat_semua_ke_kategori", async () => {
+    respons.set("/katalog/judul/7", DETAIL);
+    respons.set(SEKATEGORI, halamanKatalog([lain(1)]));
+    render(await DetailBuku(detail("7")));
+    const bagian = screen.getByRole("region", { name: "Buku Lain dalam Kategori Sejarah" });
+    expect(within(bagian).getByRole("link", { name: "Lihat semua" }).getAttribute("href")).toBe(
+      "/katalog?kategori_id=3",
+    );
   });
 
   it("FR_KTL_03_detail_404_notFound", async () => {

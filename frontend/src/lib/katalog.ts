@@ -7,6 +7,8 @@ import { formatAngka } from "./format";
 import { halamanDariParam } from "./halaman";
 
 export type JudulKatalog = components["schemas"]["JudulKatalogKeluar"];
+/** Detail satu judul: isian daftar + `deskripsi` (OQ-46, hanya di `GET /katalog/judul/{id}`). */
+export type JudulKatalogDetail = components["schemas"]["JudulKatalogDetailKeluar"];
 export type HalamanKatalog = components["schemas"]["HalamanKatalog"];
 export type Kategori = components["schemas"]["KategoriKeluar"];
 type RakKatalog = components["schemas"]["RakKatalogKeluar"];

@@ -1288,6 +1288,37 @@ export interface components {
      */
     JenisTagihan: "DENDA" | "PENGGANTIAN";
     /**
+     * JudulKatalogDetailKeluar
+     * @description Detail satu judul: isian daftar katalog ditambah deskripsi (OQ-46, hanya di detail).
+     */
+    JudulKatalogDetailKeluar: {
+      /** Id */
+      id: number;
+      /** Isbn */
+      isbn: string;
+      /** Judul */
+      judul: string;
+      /** Penulis */
+      penulis: string;
+      /** Penerbit */
+      penerbit: string;
+      /** Tahun */
+      tahun: number;
+      kategori: components["schemas"]["KategoriKeluar"];
+      /** Harga */
+      harga: number;
+      /** Cover Url */
+      cover_url: string | null;
+      /** Rak */
+      rak: components["schemas"]["RakKatalogKeluar"][];
+      /** Tersedia */
+      tersedia: number;
+      /** Total */
+      total: number;
+      /** Deskripsi */
+      deskripsi: string | null;
+    };
+    /**
      * JudulKatalogKeluar
      * @description FR-KTL-01/03. Sengaja tanpa data per eksemplar (kode, status) dan tanpa data peminjam.
      */
@@ -1335,6 +1366,8 @@ export interface components {
       harga: number;
       /** Cover Path */
       cover_path: string | null;
+      /** Deskripsi */
+      deskripsi: string | null;
       /** Cover Url */
       readonly cover_url: string | null;
     };
@@ -1354,6 +1387,8 @@ export interface components {
       kategori_id: number;
       /** Harga */
       harga: number;
+      /** Deskripsi */
+      deskripsi?: string | null;
     };
     /** KategoriKeluar */
     KategoriKeluar: {
@@ -2063,7 +2098,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["JudulKatalogKeluar"];
+          "application/json": components["schemas"]["JudulKatalogDetailKeluar"];
         };
       };
       /** @description Validasi isian gagal */
