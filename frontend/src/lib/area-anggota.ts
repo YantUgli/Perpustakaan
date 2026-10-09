@@ -77,8 +77,9 @@ export async function tagihanAktif<T extends { status: string }>(
 export const STATUS_RIWAYAT = ["DIPINJAM", "DIKEMBALIKAN", "HILANG", "RUSAK"] as const;
 export type StatusRiwayat = (typeof STATUS_RIWAYAT)[number];
 
-/** Riwayat hal-13: per halaman sama dengan bawaan backend. */
-export const PER_HALAMAN_RIWAYAT = 20;
+/** Paginasi klien (Riwayat hal-13, Tagihan hal-14): per halaman sama dengan bawaan backend. */
+export const PER_HALAMAN_KLIEN = 20;
+export const PER_HALAMAN_RIWAYAT = PER_HALAMAN_KLIEN;
 
 /** `?status=` → kode sah, selain itu (tak dikenal, kosong, berulang) `undefined` = Semua (kontrol tertutup). */
 export function statusRiwayatDariParam(
@@ -100,7 +101,7 @@ export function hitungPerStatus(item: { status: string }[]): Record<StatusRiwaya
 }
 
 /** Potongan halaman di klien; di luar jangkauan → kosong (seperti backend). */
-export function potongHalaman<T>(semua: T[], halaman: number, per = PER_HALAMAN_RIWAYAT): T[] {
+export function potongHalaman<T>(semua: T[], halaman: number, per = PER_HALAMAN_KLIEN): T[] {
   return semua.slice((halaman - 1) * per, halaman * per);
 }
 

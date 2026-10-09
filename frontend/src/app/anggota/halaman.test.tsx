@@ -945,37 +945,70 @@ describe("Riwayat (FR-AGT-03, OQ-35; hal-13 opsi b: semua halaman, hanya tampila
   });
 });
 
-describe("Tagihan (FR-AGT-04, OQ-36)", () => {
+describe("Tagihan (FR-AGT-04, OQ-36; hal-14: semua halaman, hanya tampilan)", () => {
+  type Tagihan = {
+    id: number;
+    jenis: string;
+    nominal: number;
+    status: string;
+    cara_penyelesaian: string | null;
+    tanggal_dibentuk: string;
+    tanggal_penyelesaian: string | null;
+    kode_eksemplar: string;
+    judul: string;
+  };
+  const tagihan = (id: number, ubah: Partial<Tagihan> = {}): Tagihan => ({
+    id,
+    jenis: "DENDA",
+    nominal: 10000,
+    status: "LUNAS",
+    cara_penyelesaian: "TUNAI",
+    tanggal_dibentuk: "2026-09-01",
+    tanggal_penyelesaian: "2026-09-02",
+    kode_eksemplar: `EKS-${String(id).padStart(6, "0")}`,
+    judul: `Buku ${id}`,
+    ...ubah,
+  });
+  const DENDA_BELUM = tagihan(1, {
+    nominal: 35555,
+    status: "BELUM_LUNAS",
+    cara_penyelesaian: null,
+    tanggal_dibentuk: "2026-10-05",
+    tanggal_penyelesaian: null,
+    judul: "Langit yang Sama",
+  });
+  const GANTI_LUNAS = tagihan(2, {
+    jenis: "PENGGANTIAN",
+    nominal: 98000,
+    cara_penyelesaian: "BUKU_PENGGANTI",
+    tanggal_penyelesaian: "2026-09-03",
+    judul: "Jejak di Masa Lalu",
+  });
+  /** Server palsu: dipecah per 100 seperti backend (`per_halaman=100`). */
+  function aturSemuaTagihan(semua: Tagihan[]) {
+    const jumlah = Math.max(1, Math.ceil(semua.length / 100));
+    for (let h = 1; h <= jumlah; h++) {
+      respons.set(`/anggota/tagihan?halaman=${h}&per_halaman=100`, {
+        data: semua.slice((h - 1) * 100, h * 100),
+        total: semua.length,
+        halaman: h,
+        per_halaman: 100,
+      });
+    }
+  }
+  const buka = async (q: Record<string, string> = {}) =>
+    render(await HalamanTagihan({ searchParams: Promise.resolve(q) }));
+  const tabel = () => screen.getByRole("table", { name: "Daftar Tagihan" });
+  const daftarKartu = () => screen.getByRole("list", { name: "Daftar Tagihan" });
+  const ringkas = (label: string) => {
+    const grid = screen.getByText("Total Tagihan").closest("div.grid") as HTMLElement;
+    return within(grid).getByText(label).closest("div")!;
+  };
+
   it("FR_AGT_04_cara_penyelesaian_label_atau_strip", async () => {
-    respons.set(
-      "/anggota/tagihan?halaman=1",
-      halaman([
-        {
-          id: 1,
-          jenis: "DENDA",
-          nominal: 35555,
-          status: "BELUM_LUNAS",
-          cara_penyelesaian: null,
-          tanggal_dibentuk: "2026-10-05",
-          tanggal_penyelesaian: null,
-          kode_eksemplar: "EKS-000001",
-          judul: "Langit yang Sama",
-        },
-        {
-          id: 2,
-          jenis: "PENGGANTIAN",
-          nominal: 98000,
-          status: "LUNAS",
-          cara_penyelesaian: "BUKU_PENGGANTI",
-          tanggal_dibentuk: "2026-09-01",
-          tanggal_penyelesaian: "2026-09-03",
-          kode_eksemplar: "EKS-000002",
-          judul: "Jejak di Masa Lalu",
-        },
-      ]),
-    );
-    render(await HalamanTagihan({ searchParams: Promise.resolve({}) }));
-    const [denda, ganti] = screen.getAllByRole("listitem");
+    aturSemuaTagihan([DENDA_BELUM, GANTI_LUNAS]);
+    await buka();
+    const [denda, ganti] = within(daftarKartu()).getAllByRole("listitem");
     expect(within(denda).getByText("Denda")).toBeTruthy();
     expect(within(denda).getByText("Rp35.555")).toBeTruthy();
     expect(within(denda).getByText("Belum Lunas")).toBeTruthy();
@@ -987,6 +1020,131 @@ describe("Tagihan (FR-AGT-04, OQ-36)", () => {
     // OQ-36: admin pengonfirmasi & nominal dibayar tidak ditampilkan; tanpa pembayaran online.
     expect(screen.queryByText(/admin/i)).toBeNull();
     expect(screen.getByText(/Tidak ada pembayaran online/)).toBeTruthy();
+  });
+
+  it("FR_AGT_04_kartu_rupiah_hanya_belum_lunas_lintas_halaman", async () => {
+    // 130 tagihan di 2 halaman API: 3 Belum Lunas (satu di halaman ke-2), sisanya Lunas.
+    const semua = Array.from({ length: 130 }, (_, i) => tagihan(i + 1));
+    semua[0] = tagihan(1, { status: "BELUM_LUNAS", nominal: 10000, cara_penyelesaian: null });
+    semua[50] = tagihan(51, { status: "BELUM_LUNAS", nominal: 25000, cara_penyelesaian: null });
+    semua[120] = tagihan(121, { status: "BELUM_LUNAS", nominal: 35555, cara_penyelesaian: null });
+    aturSemuaTagihan(semua);
+    await buka();
+    expect(dipanggil).toEqual([
+      "/anggota/tagihan?halaman=1&per_halaman=100",
+      "/anggota/tagihan?halaman=2&per_halaman=100",
+    ]);
+    const belum = ringkas("Belum Lunas");
+    expect(belum.textContent).toContain("Rp70.555");
+    expect(belum.textContent).toContain("3 tagihan");
+    // Lunas & Total: jumlah saja, tanpa Rupiah (Buku Pengganti bukan uang).
+    expect(ringkas("Lunas").textContent).toContain("127tagihan");
+    expect(ringkas("Lunas").textContent).not.toContain("Rp");
+    expect(ringkas("Total Tagihan").textContent).toContain("130tagihan");
+    expect(ringkas("Total Tagihan").textContent).not.toContain("Rp");
+  });
+
+  it("FR_TGH_02_03_info_pembayaran_tidak_dapat_dicicil_dan_buku_pengganti", async () => {
+    aturSemuaTagihan([DENDA_BELUM]);
+    await buka();
+    const judul = screen.getByText("Informasi Pembayaran Tagihan");
+    const kotak = judul.closest("div.rounded-xl")!;
+    expect(kotak.textContent).toContain(
+      "Tagihan diselesaikan langsung di perpustakaan dengan konfirmasi petugas, secara tunai atau transfer sebesar nominal tagihan (tidak dapat dicicil). Tagihan penggantian juga dapat diselesaikan dengan menyerahkan buku pengganti. Tidak ada pembayaran online.",
+    );
+    expect(kotak.getAttribute("role")).toBeNull();
+  });
+
+  it("FR_AGT_04_tabel_kolom_urutan_api_dan_strip", async () => {
+    const tiga = [GANTI_LUNAS, DENDA_BELUM, tagihan(3, { judul: "Ketiga" })];
+    aturSemuaTagihan(tiga);
+    await buka();
+    const t = tabel();
+    const kepala = within(t).getAllByRole("columnheader");
+    expect(kepala.map((h) => h.textContent)).toEqual([
+      "Jenis",
+      "Buku Terkait",
+      "Nominal",
+      "Status",
+      "Cara Penyelesaian",
+      "Tanggal Dibentuk",
+      "Tanggal Penyelesaian",
+    ]);
+    expect(kepala.every((h) => h.getAttribute("scope") === "col")).toBe(true);
+    const baris = within(t).getAllByRole("row").slice(1);
+    expect(baris.map((b) => within(b).getAllByRole("cell")[1].textContent)).toEqual([
+      "Jejak di Masa LaluEKS-000002",
+      "Langit yang SamaEKS-000001",
+      "KetigaEKS-000003",
+    ]);
+    expect(
+      within(baris[0])
+        .getAllByRole("cell")
+        .map((c) => c.textContent),
+    ).toEqual([
+      "Penggantian",
+      "Jejak di Masa LaluEKS-000002",
+      "Rp98.000",
+      "Lunas",
+      "Buku Pengganti",
+      "01/09/2026",
+      "03/09/2026",
+    ]);
+    const selBelum = within(baris[1])
+      .getAllByRole("cell")
+      .map((c) => c.textContent);
+    expect(selBelum[4]).toBe("—");
+    expect(selBelum[6]).toBe("—");
+    // Jenis = chip netral, bukan warna status.
+    const chip = within(baris[1]).getByText("Denda");
+    expect(chip.className).not.toMatch(/status-/);
+  });
+
+  it("paginasi_klien_20_per_halaman", async () => {
+    aturSemuaTagihan(Array.from({ length: 45 }, (_, i) => tagihan(i + 1)));
+    await buka({ halaman: "3" });
+    const baris = within(tabel()).getAllByRole("row").slice(1);
+    expect(baris).toHaveLength(5);
+    expect(within(baris[0]).getByText("Buku 41")).toBeTruthy();
+    expect(screen.getByText("Halaman 3 dari 3")).toBeTruthy();
+    const nav = screen.getByRole("navigation", { name: "Navigasi halaman" });
+    expect(within(nav).getByRole("link", { name: "Sebelumnya" }).getAttribute("href")).toBe(
+      "/anggota/tagihan?halaman=2",
+    );
+  });
+
+  it("halaman_di_luar_jangkauan_kosong_dan_tanpa_tagihan", async () => {
+    aturSemuaTagihan([DENDA_BELUM]);
+    const { unmount } = await buka({ halaman: "5" });
+    expect(screen.getByText("Tidak ada tagihan di halaman ini.")).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
+    unmount();
+    respons.clear();
+    aturSemuaTagihan([]);
+    await buka();
+    expect(screen.getByText("Tidak ada tagihan")).toBeTruthy();
+  });
+
+  it("galat_halaman_ke_2_diteruskan", async () => {
+    const galat = new Error("halaman 2 gagal");
+    respons.set("/anggota/tagihan?halaman=1&per_halaman=100", {
+      data: Array.from({ length: 100 }, (_, i) => tagihan(i + 1)),
+      total: 150,
+      halaman: 1,
+      per_halaman: 100,
+    });
+    respons.set("/anggota/tagihan?halaman=2&per_halaman=100", Promise.reject(galat));
+    await expect(HalamanTagihan({ searchParams: Promise.resolve({}) })).rejects.toBe(galat);
+  });
+
+  it("tanpa_tautan_detail_dan_tombol_bayar", async () => {
+    aturSemuaTagihan([DENDA_BELUM, GANTI_LUNAS]);
+    const { container } = await buka();
+    expect(tabel().querySelector("a, img")).toBeNull();
+    expect(daftarKartu().querySelector("a")).toBeNull();
+    expect(container.querySelector("button")).toBeNull();
+    expect(screen.queryByRole("link", { name: /bayar|detail/i })).toBeNull();
+    expect(screen.queryByText(/Urutkan|ID Tagihan/)).toBeNull();
   });
 });
 
@@ -1061,7 +1219,6 @@ describe("Kepala halaman area (decisions §B Kepala halaman area)", () => {
     respons.set("/anggota/pinjaman", []);
     respons.set(RIWAYAT_DASHBOARD, halaman([], 0));
     respons.set("/anggota/riwayat?halaman=1&per_halaman=100", halaman([], 0));
-    respons.set("/anggota/tagihan?halaman=1", halaman([], 0));
     respons.set("/anggota/qr", { kode: "AGT-000123", nama: "Aulia Rahma", isi_qr: "AGT-000123" });
     respons.set("/anggota/profil", PROFIL_AULIA);
     aturTagihan([]);
