@@ -175,6 +175,26 @@ describe("Dashboard anggota (FR-AGT-05)", () => {
     expect(k.textContent).toContain("01/10/2026");
   });
 
+  it("kartu_ringkas_dashboard_tetap_bertaut_dan_berpanah", async () => {
+    respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
+    respons.set("/anggota/pinjaman", PINJAMAN);
+    respons.set(RIWAYAT_DASHBOARD, halaman([], 2));
+    aturTagihan([]);
+    render(await Dashboard());
+    const tujuan: [string, string][] = [
+      ["Jumlah Pinjaman Aktif", "/anggota/pinjaman"],
+      ["Jatuh Tempo Terdekat", "/anggota/pinjaman"],
+      ["Tagihan Aktif", "/anggota/tagihan"],
+      ["Riwayat Peminjaman", "/anggota/riwayat"],
+    ];
+    for (const [label, href] of tujuan) {
+      const k = kartu(label);
+      expect(k.tagName).toBe("A");
+      expect(k.getAttribute("href")).toBe(href);
+      expect(k.querySelector('[data-ikon="panah"]')).not.toBeNull();
+    }
+  });
+
   it("FR_AGT_02_kartu_jatuh_tempo_terdekat_tanpa_pinjaman", async () => {
     respons.set("/anggota/kelayakan", { layak: true, alasan: [] });
     respons.set("/anggota/pinjaman", []);
@@ -583,16 +603,132 @@ describe("QR anggota (FR-AGT-01)", () => {
 });
 
 describe("Pinjaman Saya (FR-AGT-02, OQ-34)", () => {
+  // Tabel (mulai xl) dan daftar kartu (di bawah xl) sama-sama ada di DOM; pencarian teks dibatasi ke salah satunya.
+  const tabel = () => screen.getByRole("table", { name: "Daftar Buku Pinjaman Aktif" });
+  const daftarKartu = () => screen.getByRole("list", { name: "Daftar Buku Pinjaman Aktif" });
+  /** Kartu ringkas tanpa tautan, dicari di grid ringkasan (label "Terlambat" juga dipakai LabelStatus). */
+  const ringkas = (label: string) => {
+    const grid = screen.getByText("Total Pinjaman Aktif").closest("div.grid") as HTMLElement;
+    return within(grid).getByText(label).closest("div")!;
+  };
+
   it("FR_AGT_02_label_terlambat_dari_field", async () => {
     respons.set("/anggota/pinjaman", PINJAMAN);
     render(await HalamanPinjaman());
-    const [terlambat, normal] = screen.getAllByRole("listitem");
+    const [terlambat, normal] = within(daftarKartu()).getAllByRole("listitem");
     expect(within(terlambat).getByText("Terlambat")).toBeTruthy();
     expect(within(terlambat).getByText("Terlambat 4 hari")).toBeTruthy();
     expect(within(normal).getByText("Dipinjam")).toBeTruthy();
     expect(within(normal).getByText("5 hari lagi")).toBeTruthy();
     expect(within(normal).getByText("10/10/2026")).toBeTruthy();
+    // Tabel: status dari LabelStatus, Terlambat dari field `terlambat` (IR-UI-03).
+    const [, barisTerlambat, barisNormal] = within(tabel()).getAllByRole("row");
+    expect(within(barisTerlambat).getByText("Terlambat")).toBeTruthy();
+    expect(within(barisTerlambat).getByText("Terlambat 4 hari")).toBeTruthy();
+    expect(within(barisNormal).getByText("Dipinjam")).toBeTruthy();
+    expect(within(barisNormal).getByText("5 hari lagi")).toBeTruthy();
     expect(screen.getByText("Perpanjangan pinjaman tidak tersedia")).toBeTruthy();
+  });
+
+  it("FR_AGT_02_ringkasan_total_jatuh_tempo_terdekat_terlambat", async () => {
+    respons.set("/anggota/pinjaman", PINJAMAN);
+    render(await HalamanPinjaman());
+    expect(ringkas("Total Pinjaman Aktif").textContent).toContain("2buku");
+    // Jatuh tempo terdekat = pinjaman[0] (urutan API), teks dari teksSisaHari.
+    const jt = ringkas("Jatuh Tempo Terdekat");
+    expect(jt.textContent).toContain("Terlambat 4 hari");
+    expect(jt.textContent).toContain("01/10/2026");
+    expect(ringkas("Terlambat").textContent).toContain("1buku");
+    // Tanpa ambang "segera jatuh tempo ≤ 7 hari".
+    expect(screen.queryByText(/Segera Jatuh Tempo|≤ ?7/)).toBeNull();
+    // Angka lining (0 tidak mirip "O").
+    const angka = within(ringkas("Total Pinjaman Aktif")).getByText("2");
+    expect(angka.className).toContain("lining-nums");
+    expect(angka.className).not.toMatch(/(^| )angka( |$)/);
+  });
+
+  it("kartu_ringkas_tanpa_href_bukan_tautan", async () => {
+    respons.set("/anggota/pinjaman", PINJAMAN);
+    render(await HalamanPinjaman());
+    for (const label of ["Total Pinjaman Aktif", "Jatuh Tempo Terdekat", "Terlambat"]) {
+      const k = ringkas(label);
+      expect(k.closest("a")).toBeNull();
+      expect(k.querySelector('[data-ikon="panah"]')).toBeNull();
+    }
+  });
+
+  it("FR_AGT_02_tabel_kolom_dan_urutan_api", async () => {
+    const tiga = [
+      PINJAMAN[1],
+      PINJAMAN[0],
+      { ...PINJAMAN[1], kode_eksemplar: "EKS-000009", judul: "Ketiga" },
+    ];
+    respons.set("/anggota/pinjaman", tiga);
+    render(await HalamanPinjaman());
+    const t = tabel();
+    const kepala = within(t).getAllByRole("columnheader");
+    expect(kepala.map((h) => h.textContent)).toEqual([
+      "Buku",
+      "Tanggal Pinjam",
+      "Jatuh Tempo",
+      "Sisa Hari",
+      "Status",
+    ]);
+    expect(kepala.every((h) => h.getAttribute("scope") === "col")).toBe(true);
+    const baris = within(t).getAllByRole("row").slice(1);
+    // Urutan API apa adanya, tanpa urut ulang.
+    expect(baris.map((b) => within(b).getAllByRole("cell")[0].textContent)).toEqual([
+      "Jejak di Masa LaluEKS-000002",
+      "Langit yang SamaEKS-000001",
+      "KetigaEKS-000009",
+    ]);
+    const sel = within(baris[0])
+      .getAllByRole("cell")
+      .map((c) => c.textContent);
+    expect(sel.slice(1)).toEqual(["10/09/2026", "10/10/2026", "5 hari lagi", "Dipinjam"]);
+    // Tanpa cover/penulis/kategori.
+    expect(t.querySelector("img")).toBeNull();
+  });
+
+  it("FR_AGT_02_pil_dua_nada", async () => {
+    const hariIni = {
+      ...PINJAMAN[1],
+      kode_eksemplar: "EKS-000003",
+      judul: "Hari Ini",
+      sisa_hari: 0,
+    };
+    respons.set("/anggota/pinjaman", [...PINJAMAN, hariIni]);
+    render(await HalamanPinjaman());
+    const t = tabel();
+    expect(within(t).getByText("Terlambat 4 hari").getAttribute("data-nada")).toBe("terlambat");
+    expect(within(t).getByText("5 hari lagi").getAttribute("data-nada")).toBe("normal");
+    expect(within(t).getByText("Jatuh tempo hari ini").getAttribute("data-nada")).toBe("normal");
+  });
+
+  it("FR_PJM_13_info_tanpa_perpanjangan", async () => {
+    respons.set("/anggota/pinjaman", PINJAMAN);
+    const { container } = render(await HalamanPinjaman());
+    const judul = screen.getByText("Perpanjangan pinjaman tidak tersedia");
+    const kotak = judul.closest("div.rounded-xl")!;
+    expect(kotak.textContent).toContain(
+      "Buku dikembalikan langsung kepada petugas perpustakaan sebelum jatuh tempo.",
+    );
+    // Kotak keterangan statis (bukan umpan balik) dan tanpa aksi perpanjangan.
+    expect(kotak.getAttribute("role")).toBeNull();
+    expect(container.querySelector("button")).toBeNull();
+    expect(screen.queryByRole("link", { name: /perpanjang/i })).toBeNull();
+  });
+
+  it("kosong", async () => {
+    respons.set("/anggota/pinjaman", []);
+    render(await HalamanPinjaman());
+    expect(screen.getByText("Belum ada pinjaman aktif")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Lihat Katalog Buku" }).getAttribute("href")).toBe(
+      "/katalog",
+    );
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(ringkas("Jatuh Tempo Terdekat").textContent).toContain("—");
+    expect(ringkas("Terlambat").textContent).toContain("0buku");
   });
 });
 

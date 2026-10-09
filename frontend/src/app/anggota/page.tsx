@@ -5,11 +5,11 @@ import { TautanTombol } from "@/components/ui/Tombol";
 import { fotoHeroBeranda } from "@/assets/foto";
 import { ambilServer, ambilSesiServer } from "@/lib/api-server";
 import type { components } from "@/lib/api-skema";
-import { pinjamanTerdekat, tagihanAktif, teksSisaHari } from "@/lib/area-anggota";
-import { formatTanggal } from "@/lib/format";
+import { pinjamanTerdekat, tagihanAktif } from "@/lib/area-anggota";
 
 import { BannerKelayakan } from "./_komponen/BannerKelayakan";
 import { BarisPinjamanTerdekat } from "./_komponen/BarisPinjamanTerdekat";
+import { KartuJatuhTempoTerdekat } from "./_komponen/KartuJatuhTempoTerdekat";
 import { KartuRingkas } from "./_komponen/KartuRingkas";
 import { PanelDashboard } from "./_komponen/PanelDashboard";
 import { PanelRiwayatTerbaru } from "./_komponen/PanelRiwayatTerbaru";
@@ -62,27 +62,7 @@ export default async function DashboardAnggota() {
           nilai={pinjaman.length}
           satuan="buku"
         />
-        <KartuRingkas
-          href="/anggota/pinjaman"
-          label="Jatuh Tempo Terdekat"
-          ikon="kalender"
-          nada="gold"
-          nilai={
-            !pertama ? (
-              <span className="font-display text-3xl leading-none">—</span>
-            ) : pertama.terlambat || pertama.sisa_hari === 0 ? (
-              <span
-                className={`text-lg font-semibold ${pertama.terlambat ? "text-status-terlambat" : "text-navy"}`}
-              >
-                {teksSisaHari(pertama)}
-              </span>
-            ) : (
-              pertama.sisa_hari
-            )
-          }
-          satuan={pertama && !pertama.terlambat && pertama.sisa_hari > 0 ? "hari lagi" : undefined}
-          keterangan={pertama ? formatTanggal(pertama.jatuh_tempo) : "Tidak ada pinjaman"}
-        />
+        <KartuJatuhTempoTerdekat href="/anggota/pinjaman" pertama={pertama} />
         <KartuRingkas
           href="/anggota/tagihan"
           label="Tagihan Aktif"
