@@ -16,8 +16,8 @@ const KELAS: Record<Sisi, { panel: string; sizes: string }> = {
 };
 
 /**
- * Panel foto dekoratif hero publik ±55–57% lebar layar. `sisi="kanan"` (bawaan; beranda hal-02, katalog hal-03/04,
- * Tentang hal-06): di belakang ujung kolom teks, tepi kirinya dipudarkan ke ivory. `sisi="kiri"` (masuk hal-07):
+ * Panel foto dekoratif hero ±55–57% lebar layar. `sisi="kanan"` (bawaan; beranda hal-02, katalog hal-03/04,
+ * Tentang hal-06, kepala halaman area lewat `KepalaHalamanArea`): di belakang ujung kolom teks, tepi kirinya dipudarkan ke ivory. `sisi="kiri"` (masuk hal-07):
  * cerminnya, tepi kanan memudar ke ivory di belakang kartu. Menyatu dengan latar hero tanpa garis pemisah. Tanpa
  * teks di atas foto (tak terbaca di foto gelap; tagline tetap di footer). Hanya `lg` ke atas: di bawahnya panel
  * `display: none` sehingga foto (lazy) tidak diunduh. Induk wajib `relative overflow-hidden`.

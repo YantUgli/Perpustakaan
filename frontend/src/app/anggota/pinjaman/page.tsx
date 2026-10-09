@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { Kartu } from "@/components/ui/Kartu";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { Pesan } from "@/components/ui/Pesan";
 import { TautanTombol } from "@/components/ui/Tombol";
@@ -20,10 +22,11 @@ export default async function HalamanPinjaman() {
 
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Pinjaman Saya</h1>
-        <p className="text-navy/80">Buku yang sedang Anda pinjam.</p>
-      </header>
+      <KepalaHalamanArea
+        judul="Pinjaman Saya"
+        subjudul="Buku yang sedang Anda pinjam. Pastikan dikembalikan tepat waktu."
+        foto={fotoHeroBeranda}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <Kartu>

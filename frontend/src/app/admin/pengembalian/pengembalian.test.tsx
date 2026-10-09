@@ -128,6 +128,8 @@ describe("AlurPengembalian (FR-KMB)", () => {
     );
     await waitFor(() => expect(screen.getByText("Dikembalikan")).toBeTruthy());
     expect(mockKonfirmasiKembali).toHaveBeenCalledWith("EKS-000001");
+    // Layar sukses tanpa kepala halaman (decisions §B Kepala halaman area).
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
 
   it("test_FR_KMB_06_sukses_ada_tautan_tagihan", async () => {
@@ -248,5 +250,25 @@ describe("AlurPengembalian galat non-API (IR-UI-04)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Konfirmasi Pengembalian" })),
     );
     await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
+  });
+});
+
+/** Kepala halaman area varian padat (decisions §B): foto dekoratif mulai `lg`, h1 `text-2xl` di bawah `lg`. */
+function periksaKepalaPadat(judul: string) {
+  const h1 = screen.getByRole("heading", { level: 1, name: judul });
+  expect(h1.className.split(" ")).toEqual(expect.arrayContaining(["text-2xl", "lg:text-4xl"]));
+  const header = h1.closest("header")!;
+  const img = header.querySelectorAll("img");
+  expect(img).toHaveLength(1);
+  expect(img[0].getAttribute("alt")).toBe("");
+  expect(img[0].getAttribute("src")).toContain("hero-beranda");
+  expect(img[0].closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+  return header;
+}
+
+describe("Kepala halaman area (decisions §B, IR-UI-01)", () => {
+  it("IR_UI_01_kepala_padat_berfoto", () => {
+    render(<AlurPengembalian />);
+    periksaKepalaPadat("Pengembalian");
   });
 });

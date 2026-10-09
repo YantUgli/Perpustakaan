@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { fotoHeroBeranda } from "@/assets/foto";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { ambilServer } from "@/lib/api-server";
 import type { components } from "@/lib/api-skema";
 
@@ -12,10 +14,11 @@ export default async function HalamanRak() {
   const data = await ambilServer<components["schemas"]["RakKeluar"][]>("/admin/rak");
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Rak</h1>
-        <p className="text-navy/80">Lokasi penyimpanan eksemplar.</p>
-      </header>
+      <KepalaHalamanArea
+        judul="Rak"
+        subjudul="Kelola lokasi rak tempat eksemplar disimpan."
+        foto={fotoHeroBeranda}
+      />
       <DaftarMaster jenis="rak" data={data} />
     </section>
   );

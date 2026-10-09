@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PanelHero } from "@/components/publik/PanelHero";
 import { Ikon } from "@/components/ui/Ikon";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { TautanTombol } from "@/components/ui/Tombol";
 import { fotoHeroBeranda } from "@/assets/foto";
@@ -42,20 +42,12 @@ export default async function DashboardAnggota() {
 
   return (
     <section className="flex flex-col gap-6">
-      {/* D3: foto dekoratif kanan mulai lg; kolom teks dibatasi 43% agar tidak menimpa foto (57%). */}
-      {/* -mx-4 -mt-6 sm:-mx-8 mengimbangi padding <main> di layout.tsx (px-4 py-6 sm:px-8); ubah bersama. */}
-      <header className="relative -mx-4 -mt-6 overflow-hidden px-4 pt-6 pb-2 sm:-mx-8 sm:px-8 lg:min-h-52 lg:pt-10">
-        <PanelHero foto={fotoHeroBeranda} />
-        <div className="relative flex flex-col gap-3 lg:max-w-[43%]">
-          <h1 className="font-display text-4xl leading-tight break-words xl:text-5xl">
-            Selamat Datang, {sesi?.nama}
-          </h1>
-          <p className="text-navy/80">
-            Terima kasih telah menjadi bagian dari Perpustakaan Naratif. Teruslah membaca, belajar,
-            dan menjelajahi lebih banyak pengetahuan setiap hari.
-          </p>
-        </div>
-      </header>
+      {/* Kepala halaman area (decisions §B, menggantikan D3): foto dekoratif kanan mulai lg. */}
+      <KepalaHalamanArea
+        judul={`Selamat Datang, ${sesi?.nama ?? ""}`}
+        subjudul="Terima kasih telah menjadi bagian dari Perpustakaan Naratif. Teruslah membaca, belajar, dan menjelajahi lebih banyak pengetahuan setiap hari."
+        foto={fotoHeroBeranda}
+      />
 
       <BannerKelayakan kelayakan={kelayakan} />
 

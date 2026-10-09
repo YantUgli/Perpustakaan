@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const respons = new Map<string, unknown>();
@@ -125,5 +125,25 @@ describe("Cetak label (FR-BKU-06, IR-HW-02)", () => {
     const { container } = render(await CetakLabel({ searchParams: Promise.resolve({ id: "1" }) }));
     expect(screen.getByRole("alert").textContent).toBe(pesan);
     expect(container.querySelectorAll("[data-lembar]")).toHaveLength(0);
+  });
+});
+
+/** Foto dekoratif di kepala halaman (decisions §B Kepala halaman area): `alt=""`, panel `aria-hidden` mulai `lg`. */
+function fotoKepala(wadah: Element) {
+  return [...wadah.querySelectorAll("header img")].map((img) => {
+    expect(img.getAttribute("alt")).toBe("");
+    expect(img.closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+    return img.getAttribute("src")!;
+  });
+}
+
+describe("Kepala halaman area (decisions §B)", () => {
+  it("IR_HW_02_cetak_label_tanpa_foto_kepala_di_dalam_print_hidden", async () => {
+    respons.set("/admin/eksemplar/label?id=1", buatLabel(1));
+    const { container } = render(await CetakLabel({ searchParams: Promise.resolve({ id: "1" }) }));
+    const h1 = screen.getByRole("heading", { level: 1, name: "Cetak Label" });
+    expect(h1.closest(".print\\:hidden")).toBeTruthy();
+    expect(fotoKepala(container)).toEqual([]);
+    expect(within(h1.closest("header")!).getByRole("button", { name: /Cetak/ })).toBeTruthy();
   });
 });

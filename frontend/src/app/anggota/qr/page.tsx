@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { Avatar } from "@/components/ui/Avatar";
 import { Kartu } from "@/components/ui/Kartu";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KodeQr } from "@/components/ui/KodeQr";
 import { Pesan } from "@/components/ui/Pesan";
 import { ambilServer } from "@/lib/api-server";
@@ -19,12 +21,11 @@ export default async function HalamanQr() {
   const qr = await ambilServer<Qr>("/anggota/qr");
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">QR Anggota</h1>
-        <p className="text-navy/80">
-          Tunjukkan QR ini kepada petugas perpustakaan saat meminjam buku.
-        </p>
-      </header>
+      <KepalaHalamanArea
+        judul="QR Anggota"
+        subjudul="Tunjukkan QR ini kepada petugas perpustakaan saat meminjam buku."
+        foto={fotoHeroBeranda}
+      />
 
       <Kartu className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 p-4 sm:p-6">
         <div className="rounded-lg bg-white p-2">

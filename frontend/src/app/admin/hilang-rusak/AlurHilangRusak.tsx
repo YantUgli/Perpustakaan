@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { Pemindai } from "@/components/pemindai/Pemindai";
 import { AreaIsian } from "@/components/ui/AreaIsian";
 import { Isian } from "@/components/ui/Isian";
 import { Kartu } from "@/components/ui/Kartu";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { Modal } from "@/components/ui/Modal";
 import { Pesan } from "@/components/ui/Pesan";
@@ -182,7 +184,13 @@ export function AlurHilangRusak() {
 
   return (
     <section className="flex flex-col gap-4">
-      <h1 className="font-display text-2xl">Hilang / Rusak</h1>
+      {/* Kepala halaman area, varian padat (IR-UI-01): mobile tidak lebih tinggi; tidak tampil di layar sukses. */}
+      <KepalaHalamanArea
+        judul="Hilang / Rusak"
+        subjudul="Catat eksemplar hilang atau rusak beserta tagihan penggantiannya."
+        foto={fotoHeroBeranda}
+        padat
+      />
 
       {/* ── LANGKAH 1: Identifikasi ── */}
       {tahap === "identifikasi" && (

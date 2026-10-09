@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { Pesan } from "@/components/ui/Pesan";
 import { ambilServer } from "@/lib/api-server";
@@ -44,17 +45,17 @@ export default async function CetakLabel({
         <Link href="/admin/judul" className="text-sm font-semibold text-gold-700">
           ← Kembali ke data buku
         </Link>
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h1 className="font-display text-3xl sm:text-4xl">Cetak Label</h1>
-            {label.length > 0 && (
-              <p className="angka text-navy/80">
+        <KepalaHalamanArea
+          judul="Cetak Label"
+          subjudul={
+            label.length > 0 && (
+              <span className="angka">
                 {label.length} label · {LABEL_PER_HALAMAN} per halaman A4
-              </p>
-            )}
-          </div>
-          {label.length > 0 && <TombolCetak />}
-        </header>
+              </span>
+            )
+          }
+          aksi={label.length > 0 && <TombolCetak />}
+        />
         <p className="print:hidden rounded-lg border border-line bg-surface px-4 py-3 text-sm text-navy/90">
           Cetak dengan skala 100% (jangan pilih &ldquo;fit to page&rdquo; atau &ldquo;sesuaikan
           dengan halaman&rdquo;), kertas A4, orientasi potret. Label dipotong mengikuti garis

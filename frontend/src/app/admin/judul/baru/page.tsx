@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Kartu } from "@/components/ui/Kartu";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { ambilServer } from "@/lib/api-server";
 import type { components } from "@/lib/api-skema";
 
@@ -17,12 +18,10 @@ export default async function JudulBaru() {
       <Link href="/admin/judul" className="text-sm font-semibold text-gold-700">
         ← Kembali ke data buku
       </Link>
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Tambah Judul</h1>
-        <p className="text-navy/80">
-          Isi data judul. Eksemplar ditambahkan sesudah judul tersimpan.
-        </p>
-      </header>
+      <KepalaHalamanArea
+        judul="Tambah Judul"
+        subjudul="Isi data judul. Eksemplar ditambahkan sesudah judul tersimpan."
+      />
       <Kartu>
         <FormJudul kategori={kategori} />
       </Kartu>

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GalatApi, PESAN_SISTEM } from "@/lib/galat";
@@ -269,6 +269,8 @@ describe("AlurPeminjaman (FR-PJM)", () => {
     // Jatuh tempo dari TransaksiKeluar.item[0].jatuh_tempo (FR-PJM-11), bukan +30 hari klien
     await waitFor(() => expect(screen.getByText(/Peminjaman berhasil/)).toBeTruthy());
     expect(screen.getByText("05/11/2026")).toBeTruthy(); // formatTanggal("2026-11-05")
+    // Layar sukses tanpa kepala halaman (decisions §B Kepala halaman area).
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
 
   it("test_FR_PJM_02_identitas_anggota_tampil_nama_kode_pinjaman_aktif", async () => {
@@ -392,5 +394,31 @@ describe("AlurPeminjaman galat non-API (IR-UI-04)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Konfirmasi Peminjaman" })),
     );
     await waitFor(() => expect(screen.getByText(PESAN_SISTEM)).toBeTruthy());
+  });
+});
+
+/** Kepala halaman area varian padat (decisions §B): foto dekoratif mulai `lg`, h1 `text-2xl` di bawah `lg`. */
+function periksaKepalaPadat(judul: string) {
+  const h1 = screen.getByRole("heading", { level: 1, name: judul });
+  expect(h1.className.split(" ")).toEqual(expect.arrayContaining(["text-2xl", "lg:text-4xl"]));
+  const header = h1.closest("header")!;
+  const img = header.querySelectorAll("img");
+  expect(img).toHaveLength(1);
+  expect(img[0].getAttribute("alt")).toBe("");
+  expect(img[0].getAttribute("src")).toContain("hero-beranda");
+  expect(img[0].closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+  return header;
+}
+
+describe("Kepala halaman area (decisions §B, IR-UI-01)", () => {
+  it("IR_UI_01_kepala_padat_berfoto_reset_tetap_di_kepala", () => {
+    render(<AlurPeminjaman />);
+    const header = periksaKepalaPadat("Peminjaman");
+    expect(within(header).getByRole("button", { name: "Reset" })).toBeTruthy();
+    expect(
+      within(header).getByText(
+        "Pindai atau ketik kode anggota, lalu kode eksemplar yang akan dipinjam.",
+      ).className,
+    ).toContain("hidden lg:block");
   });
 });

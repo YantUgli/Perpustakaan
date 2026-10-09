@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 
 import { fotoHeroTentang, fotoProfilTentang } from "@/assets/foto";
 import { KartuCtaDaftar } from "@/components/publik/KartuCtaDaftar";
-import { PanelHero } from "@/components/publik/PanelHero";
 import { Ikon, type NamaIkon } from "@/components/ui/Ikon";
+import { PanelHero } from "@/components/ui/PanelHero";
 import type { BagianTentang } from "@/lib/info-perpustakaan";
 import { KONTAINER } from "@/lib/tata-letak";
 

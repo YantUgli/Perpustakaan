@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { Isian } from "@/components/ui/Isian";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { LabelStatus } from "@/components/ui/LabelStatus";
 import { Paginasi } from "@/components/ui/Paginasi";
@@ -42,10 +44,11 @@ export default async function DaftarTagihan({
 
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Tagihan</h1>
-        <p className="text-navy/80">Denda keterlambatan dan penggantian buku seluruh anggota.</p>
-      </header>
+      <KepalaHalamanArea
+        judul="Tagihan"
+        subjudul="Denda keterlambatan dan penggantian buku seluruh anggota."
+        foto={fotoHeroBeranda}
+      />
 
       <form
         method="get"

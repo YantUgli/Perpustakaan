@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { fotoHeroBeranda } from "@/assets/foto";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { LabelStatus } from "@/components/ui/LabelStatus";
 import { Paginasi } from "@/components/ui/Paginasi";
@@ -28,10 +30,11 @@ export default async function HalamanTagihan({
 
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Tagihan</h1>
-        <p className="text-navy/80">Denda keterlambatan dan penggantian buku atas nama Anda.</p>
-      </header>
+      <KepalaHalamanArea
+        judul="Tagihan"
+        subjudul="Ringkasan denda dan penggantian buku atas nama Anda."
+        foto={fotoHeroBeranda}
+      />
 
       <Pesan jenis="info" judul="Pembayaran tagihan">
         Tagihan diselesaikan langsung di perpustakaan, secara tunai atau transfer dengan konfirmasi

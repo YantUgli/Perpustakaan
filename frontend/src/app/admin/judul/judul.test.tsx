@@ -133,11 +133,11 @@ describe("Daftar judul (FR-BKU-02)", () => {
     // Tanpa kolom stok (OQ-45: stok hanya di detail judul, FR-BKU-09).
     const kepala = Array.from(container.querySelectorAll("th")).map((th) => th.textContent);
     expect(kepala.join(" ")).not.toMatch(/stok|tersedia|eksemplar/i);
-    // Cover dari `cover_url` API; tanpa cover → pengganti, bukan gambar rusak.
-    expect(container.querySelectorAll("img")).toHaveLength(1);
-    expect(container.querySelector("img")?.getAttribute("src")).toBe(
-      "/api/v1/katalog/judul/7/cover",
-    );
+    // Cover dari `cover_url` API; tanpa cover → pengganti, bukan gambar rusak. Foto dekoratif kepala halaman
+    // (decisions §B Kepala halaman area) tidak dihitung.
+    const cover = [...container.querySelectorAll("img")].filter((img) => !img.closest("header"));
+    expect(cover).toHaveLength(1);
+    expect(cover[0].getAttribute("src")).toBe("/api/v1/katalog/judul/7/cover");
   });
 
   it("FR_BKU_02_daftar_kosong_state_kosong", async () => {
@@ -712,5 +712,43 @@ describe("Eksemplar per judul (FR-BKU-04..09, K-02, OQ-20, OQ-21)", () => {
     );
     fireEvent.click(screen.getByLabelText("Pilih semua eksemplar"));
     expect(screen.queryByRole("link", { name: /Cetak Label/ })).toBeNull();
+  });
+});
+
+/** Foto dekoratif di kepala halaman (decisions §B Kepala halaman area): `alt=""`, panel `aria-hidden` mulai `lg`. */
+function fotoKepala(wadah: Element) {
+  return [...wadah.querySelectorAll("header img")].map((img) => {
+    expect(img.getAttribute("alt")).toBe("");
+    expect(img.closest('[aria-hidden="true"]')?.classList.contains("hidden")).toBe(true);
+    return img.getAttribute("src")!;
+  });
+}
+
+describe("Kepala halaman area (decisions §B)", () => {
+  it("IR_UI_03_daftar_judul_berfoto_tombol_tambah_setelah_subjudul_di_kolom_teks", async () => {
+    respons.set("/admin/judul?halaman=1", { data: [], total: 0, halaman: 1, per_halaman: 20 });
+    const { container } = render(await DaftarJudul({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Data Buku & Eksemplar");
+    expect(fotoKepala(container)).toEqual([expect.stringContaining("hero-beranda")]);
+    const tambah = screen.getByRole("link", { name: "Tambah Judul" });
+    expect(tambah.closest("header")).toBeTruthy();
+    expect(tambah.closest('[aria-hidden="true"]')).toBeNull();
+    // Kepala berfoto tanpa `padat`: aksi di baris tersendiri setelah subjudul (decisions §B).
+    const subjudul = screen.getByText("Judul koleksi perpustakaan. Eksemplar dikelola per judul.");
+    expect(
+      subjudul.compareDocumentPosition(tambah) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("halaman_turunan_tambah_dan_ubah_judul_tanpa_foto", async () => {
+    respons.set("/admin/kategori", KATEGORI);
+    respons.set("/admin/judul/7", JUDUL);
+    const baru = render(await JudulBaru());
+    expect(screen.getByRole("heading", { level: 1, name: "Tambah Judul" })).toBeTruthy();
+    expect(fotoKepala(baru.container)).toEqual([]);
+    baru.unmount();
+    const ubah = render(await UbahJudul({ params: Promise.resolve({ id: "7" }) }));
+    expect(screen.getByRole("heading", { level: 1, name: "Ubah Judul" })).toBeTruthy();
+    expect(fotoKepala(ubah.container)).toEqual([]);
   });
 });

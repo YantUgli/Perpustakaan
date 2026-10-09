@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { fotoHeroBeranda } from "@/assets/foto";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { LabelStatus } from "@/components/ui/LabelStatus";
 import { Paginasi } from "@/components/ui/Paginasi";
@@ -49,10 +51,11 @@ export default async function HalamanRiwayat({
 
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Riwayat Peminjaman</h1>
-        <p className="text-navy/80">Semua buku yang pernah dan sedang Anda pinjam.</p>
-      </header>
+      <KepalaHalamanArea
+        judul="Riwayat Peminjaman"
+        subjudul="Semua buku yang pernah dan sedang Anda pinjam."
+        foto={fotoHeroBeranda}
+      />
 
       {riwayat.data.length === 0 ? (
         <KosongState judul="Belum ada riwayat peminjaman" />

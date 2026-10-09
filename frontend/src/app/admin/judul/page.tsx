@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { Isian } from "@/components/ui/Isian";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { KosongState } from "@/components/ui/KosongState";
 import { Paginasi } from "@/components/ui/Paginasi";
 import { Pesan } from "@/components/ui/Pesan";
@@ -38,13 +40,12 @@ export default async function DaftarJudul({
 
   return (
     <section className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-display text-3xl sm:text-4xl">Data Buku &amp; Eksemplar</h1>
-          <p className="text-navy/80">Judul koleksi perpustakaan. Eksemplar dikelola per judul.</p>
-        </div>
-        <TautanTombol href="/admin/judul/baru">Tambah Judul</TautanTombol>
-      </header>
+      <KepalaHalamanArea
+        judul="Data Buku & Eksemplar"
+        subjudul="Judul koleksi perpustakaan. Eksemplar dikelola per judul."
+        aksi={<TautanTombol href="/admin/judul/baru">Tambah Judul</TautanTombol>}
+        foto={fotoHeroBeranda}
+      />
 
       {judulBaruDihapus(param) && <Pesan jenis="sukses">{PESAN_JUDUL_DIHAPUS}</Pesan>}
 

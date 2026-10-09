@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Kartu } from "@/components/ui/Kartu";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 
 import { ambilAnggota } from "../../ambil-anggota";
 
@@ -17,13 +18,15 @@ export default async function UbahAnggota({ params }: { params: Promise<{ kode: 
       <Link href={`/admin/anggota/${a.kode}`} className="text-sm font-semibold text-gold-700">
         ← Kembali ke detail anggota
       </Link>
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">Ubah Data Anggota</h1>
-        <p className="text-navy/80">
-          Untuk anggota yang lupa password, isi &ldquo;Password baru&rdquo; dan sampaikan kepada
-          anggota.
-        </p>
-      </header>
+      <KepalaHalamanArea
+        judul="Ubah Data Anggota"
+        subjudul={
+          <>
+            Untuk anggota yang lupa password, isi &ldquo;Password baru&rdquo; dan sampaikan kepada
+            anggota.
+          </>
+        }
+      />
       <Kartu>
         <FormUbahAnggota awal={a} />
       </Kartu>

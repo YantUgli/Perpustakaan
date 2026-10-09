@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { fotoHeroBeranda } from "@/assets/foto";
 import { Pemindai } from "@/components/pemindai/Pemindai";
 import { Kartu } from "@/components/ui/Kartu";
+import { KepalaHalamanArea } from "@/components/ui/KepalaHalamanArea";
 import { Pesan } from "@/components/ui/Pesan";
 import { Tombol } from "@/components/ui/Tombol";
 import { formatRupiah, formatTanggal } from "@/lib/format";
@@ -67,7 +69,13 @@ export function AlurPengembalian() {
 
   return (
     <section className="flex flex-col gap-4">
-      <h1 className="font-display text-2xl">Pengembalian</h1>
+      {/* Kepala halaman area, varian padat (IR-UI-01): mobile tidak lebih tinggi; tidak tampil di layar sukses. */}
+      <KepalaHalamanArea
+        judul="Pengembalian"
+        subjudul="Pindai atau ketik kode eksemplar; denda keterlambatan dihitung otomatis."
+        foto={fotoHeroBeranda}
+        padat
+      />
 
       {tahap === "scan" && (
         <>

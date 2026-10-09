@@ -7,7 +7,7 @@ import { KartuBukuRingkas } from "@/components/katalog/KartuBukuRingkas";
 import { Ikon, type NamaIkon } from "@/components/ui/Ikon";
 import { KosongState } from "@/components/ui/KosongState";
 import { KartuCtaDaftar } from "@/components/publik/KartuCtaDaftar";
-import { PanelHero } from "@/components/publik/PanelHero";
+import { PanelHero } from "@/components/ui/PanelHero";
 import { TautanTombol } from "@/components/ui/Tombol";
 import { ambilServer } from "@/lib/api-server";
 import { bagianTentang } from "@/lib/info-perpustakaan";
