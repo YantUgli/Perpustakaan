@@ -204,7 +204,7 @@ export function FormDaftar() {
             accept="image/jpeg,image/png"
             teksTombol="Pilih Foto"
             teksKosong="Belum ada foto dipilih"
-            keterangan="Format JPG atau PNG, maksimal 2 MB. Foto tidak dapat diubah setelah pendaftaran."
+            keterangan="Format JPG atau PNG, maksimal 2 MB. Foto dapat diganti nanti dari halaman Profil."
             berkas={nilai.foto}
             onPilih={(foto) => setNilai((n) => ({ ...n, foto }))}
             galat={galatIsian.foto}

@@ -1,14 +1,15 @@
-import { Avatar } from "@/components/ui/Avatar";
 import { Ikon } from "@/components/ui/Ikon";
 import type { components } from "@/lib/api-skema";
 import { formatTanggal } from "@/lib/format";
 
 import { KartuRingkas } from "../_komponen/KartuRingkas";
+import { UbahFoto } from "./UbahFoto";
 
 type Profil = components["schemas"]["ProfilKeluar"];
 
 /**
- * Kartu kiri Profil Saya (hal-16): foto (OQ-42, bila `ada_foto`; gagal muat → inisial) atau inisial, nama, ID
+ * Kartu kiri Profil Saya (hal-16): foto (OQ-42, bila `ada_foto`; gagal muat → inisial) atau inisial beserta ubah foto
+ * sendiri (`UbahFoto`, OQ-48), nama, ID
  * Anggota, Tanggal Bergabung, dan Total Peminjaman (`total` riwayat, FR-AGT-03; tidak dirender bila riwayat gagal).
  * Tanpa lencana "Aktif", jenis keanggotaan, maupun status (§13, ∅API). NIK ada di panel Informasi Pribadi.
  */
@@ -24,14 +25,8 @@ export function RingkasanProfil({
       aria-label="Ringkasan profil"
       className="flex flex-col items-center gap-5 rounded-xl border border-line bg-surface p-5 text-center sm:p-6"
     >
-      <div className="flex flex-col items-center gap-3">
-        <span className="rounded-full p-1.5 ring-4 ring-gold/30">
-          <Avatar
-            nama={profil.nama}
-            src={profil.ada_foto ? "/api/v1/anggota/profil/foto" : null}
-            ukuran="kartu"
-          />
-        </span>
+      <div className="flex w-full flex-col items-center gap-3">
+        <UbahFoto nama={profil.nama} adaFoto={profil.ada_foto} />
         <p className="font-display text-2xl leading-tight wrap-break-word">{profil.nama}</p>
       </div>
 

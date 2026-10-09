@@ -788,7 +788,12 @@ export interface paths {
      * @description ASUMSI(OQ-42): foto milik anggota yang login; tanpa foto/berkas hilang → 404.
      */
     get: operations["foto_api_v1_anggota_profil_foto_get"];
-    put?: never;
+    /**
+     * Ganti Foto
+     * @description OQ-48: anggota menambah atau mengganti foto sendiri; identitas dari sesi.
+     *     JPG/PNG ≤ 2 MB, diperiksa dari isi berkas (NFR-SEC-06). Nama berkas dari klien diabaikan.
+     */
+    put: operations["ganti_foto_api_v1_anggota_profil_foto_put"];
     post?: never;
     delete?: never;
     options?: never;
@@ -1027,6 +1032,11 @@ export interface components {
     Body_ganti_cover_api_v1_admin_judul__judul_id__cover_put: {
       /** Berkas */
       berkas: string;
+    };
+    /** Body_ganti_foto_api_v1_anggota_profil_foto_put */
+    Body_ganti_foto_api_v1_anggota_profil_foto_put: {
+      /** Foto */
+      foto: string;
     };
     /**
      * CaraPenyelesaian
@@ -3571,6 +3581,41 @@ export interface operations {
         content: {
           "image/jpeg": unknown;
           "image/png": unknown;
+        };
+      };
+      /** @description Validasi isian gagal */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GalatRespons"];
+        };
+      };
+    };
+  };
+  ganti_foto_api_v1_anggota_profil_foto_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: {
+        sesi_perpus?: string | null;
+      };
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_ganti_foto_api_v1_anggota_profil_foto_put"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProfilKeluar"];
         };
       };
       /** @description Validasi isian gagal */
