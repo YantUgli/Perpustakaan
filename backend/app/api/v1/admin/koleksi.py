@@ -101,12 +101,13 @@ def detail_judul(judul_id: int, db: DB):
 
 @router.post("/judul", response_model=JudulKeluar, status_code=201)
 def tambah_judul(data: JudulMasuk, db: DB):
-    return koleksi.simpan_judul(db, koleksi.DataJudul(**data.model_dump()))
+    return koleksi.simpan_judul(db, koleksi.DataJudul(**data.model_dump(exclude_unset=True)))
 
 
 @router.put("/judul/{judul_id}", response_model=JudulKeluar)
 def ubah_judul(judul_id: int, data: JudulMasuk, db: DB):
-    return koleksi.simpan_judul(db, koleksi.DataJudul(**data.model_dump()), judul_id=judul_id)
+    data_judul = koleksi.DataJudul(**data.model_dump(exclude_unset=True))
+    return koleksi.simpan_judul(db, data_judul, judul_id=judul_id)
 
 
 @router.delete("/judul/{judul_id}", status_code=204)

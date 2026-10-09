@@ -6,6 +6,7 @@ PostgreSQL tidak bocor ke klien.
 """
 
 from dataclasses import dataclass
+from types import EllipsisType
 from typing import BinaryIO
 
 from sqlalchemy import exists, func, select
@@ -208,6 +209,33 @@ class DataJudul:
     tahun: int
     kategori_id: int
     harga: int
+    # ASUMSI(OQ-46): `...` = isian tidak dikirim → tidak diubah (judul baru: kosong)
+    deskripsi: str | None | EllipsisType = ...
+
+
+DESKRIPSI_MAKS = 2000  # ASUMSI(OQ-46), dihitung setelah trim
+
+
+def _ribuan(n: int) -> str:
+    return f"{n:,}".replace(",", ".")
+
+
+def _deskripsi_bersih(teks: str | None) -> str | None:
+    """OQ-46: trim tepi (baris baru di tengah tetap); kosong → None; lebih dari batas → 422."""
+    bersih = (teks or "").strip()
+    if len(bersih) > DESKRIPSI_MAKS:
+        pesan = (
+            f"Deskripsi maksimal {_ribuan(DESKRIPSI_MAKS)} karakter "
+            f"(saat ini {_ribuan(len(bersih))})."
+        )
+        raise GalatBisnis(
+            kode="BKU_DESKRIPSI_TERLALU_PANJANG",
+            pesan=pesan,
+            rujukan="OQ-46",
+            status_code=422,
+            isian={"deskripsi": pesan},
+        )
+    return bersih or None
 
 
 def _galat_isbn_duplikat(isbn: str, judul_pemilik: str) -> GalatBisnis:
@@ -294,6 +322,7 @@ def simpan_judul(db: Session, data: DataJudul, *, judul_id: int | None = None) -
         raise _tidak_valid(
             "BKU_KATEGORI_TIDAK_ADA", "Kategori yang dipilih tidak ditemukan.", "FR-BKU-02"
         )
+    deskripsi = data.deskripsi if data.deskripsi is ... else _deskripsi_bersih(data.deskripsi)
 
     j = JudulBuku() if judul_id is None else _judul(db, judul_id)
     pemilik = _judul_ber_isbn(db, isian["isbn"], kecuali_id=judul_id)
@@ -303,6 +332,8 @@ def simpan_judul(db: Session, data: DataJudul, *, judul_id: int | None = None) -
     j.isbn, j.judul = isian["isbn"], isian["judul"]
     j.penulis, j.penerbit = isian["penulis"], isian["penerbit"]
     j.tahun, j.kategori_id, j.harga = data.tahun, data.kategori_id, data.harga
+    if deskripsi is not ...:
+        j.deskripsi = deskripsi
     db.add(j)
     try:
         db.commit()

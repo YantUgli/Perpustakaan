@@ -72,6 +72,8 @@ class JudulBuku(Base):
         BigInteger, ForeignKey("kategori.id", ondelete="RESTRICT"), index=True
     )
     cover_path: Mapped[str | None] = mapped_column(Text)  # ASUMSI(OQ-10): opsional
+    # ASUMSI(OQ-46, CR di luar DR-05): opsional, maks 2.000 karakter (diperiksa service)
+    deskripsi: Mapped[str | None] = mapped_column(Text)
     # Hanya arah judul → kategori (tanpa backref): menghapus kategori tidak menyentuh judul di ORM,
     # sehingga FK RESTRICT yang menolak bila kategori masih dipakai (FR-BKU-01).
     kategori: Mapped[Kategori] = relationship()
