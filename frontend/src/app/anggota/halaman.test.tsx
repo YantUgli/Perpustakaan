@@ -1159,7 +1159,11 @@ const PROFIL_AULIA = {
   ada_foto: false,
 };
 
-describe("Profil (FR-AKN-07, K-05)", () => {
+describe("Profil (FR-AKN-07, K-05; hal-16/17 satu halaman)", () => {
+  const RIWAYAT_TOTAL = "/anggota/riwayat?halaman=1&per_halaman=1";
+  beforeEach(() => respons.set(RIWAYAT_TOTAL, halaman([], 12)));
+  const kartuKiri = () => screen.getByRole("region", { name: "Ringkasan profil" });
+
   it("K_05_nik_foto_tidak_bisa_diubah (NIK tampil utuh, bukan isian)", async () => {
     respons.set("/anggota/profil", PROFIL_AULIA);
     render(await HalamanProfil());
@@ -1184,13 +1188,14 @@ describe("Profil (FR-AKN-07, K-05)", () => {
     // Bukti tanpa request foto: peramban hanya memuat foto bila ada <img> berisi path endpoint foto. Selektor
     // memakai path endpoint (bukan "/foto") karena foto dekoratif kepala halaman ada di `assets/foto/`.
     expect(container.querySelector('img[src*="/api/v1/anggota/profil/foto"]')).toBeNull();
-    expect(dipanggil).toEqual(["/anggota/profil"]);
+    // Selain profil hanya total riwayat (kartu Total Peminjaman); tidak ada request foto.
+    expect(dipanggil).toEqual(["/anggota/profil", RIWAYAT_TOTAL]);
   });
 
   it("FR_AKN_07_09_profil_memuat_dua_form_terpisah (data diri & ubah password, tombol masing-masing)", async () => {
     respons.set("/anggota/profil", PROFIL_AULIA);
     render(await HalamanProfil());
-    expect(screen.getByRole("heading", { name: "Data Diri" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Informasi Pribadi" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Ubah Password" })).toBeTruthy();
     const tombolData = screen.getByRole("button", { name: "Simpan Data Diri" });
     const tombolPassword = screen.getByRole("button", { name: "Ubah Password" });
@@ -1201,6 +1206,90 @@ describe("Profil (FR-AKN-07, K-05)", () => {
     expect(within(formData).queryByLabelText(/Password Lama/)).toBeNull();
     expect(within(formPassword).getByLabelText(/Password Lama/)).toBeTruthy();
     expect(within(formPassword).queryByLabelText(/^Email/)).toBeNull();
+    // Label tombol tetap (keputusan Ayen 09/10/2026).
+    expect(
+      screen.queryByRole("button", { name: /Simpan Perubahan|Simpan Password Baru/ }),
+    ).toBeNull();
+  });
+
+  it("P3_nik_utuh_sebagai_teks_di_informasi_tidak_dapat_diubah_bukan_kartu_kiri", async () => {
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    render(await HalamanProfil());
+    const panel = screen.getByRole("region", { name: "Informasi Pribadi" });
+    expect(
+      within(panel).getByRole("heading", { name: "Informasi Tidak Dapat Diubah" }),
+    ).toBeTruthy();
+    const nik = within(panel).getByText("3171012345678901");
+    expect(nik.tagName).toBe("DD");
+    expect(nik.closest("form")).toBeNull();
+    expect(screen.getAllByText("3171012345678901")).toHaveLength(1);
+    expect(within(kartuKiri()).queryByText(/NIK|3171012345678901/)).toBeNull();
+    expect(screen.queryByRole("textbox", { name: /NIK/ })).toBeNull();
+    expect(
+      within(panel).getByText(
+        "NIK hanya diisi saat pendaftaran dan tidak dapat diubah. Bila ada kesalahan data, hubungi petugas perpustakaan.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("OQ_48_tanpa_kalimat_foto_tidak_dapat_diubah_dan_foto_sekali", async () => {
+    respons.set("/anggota/profil", { ...PROFIL_AULIA, ada_foto: true });
+    const { container } = render(await HalamanProfil());
+    expect(container.textContent).not.toMatch(/foto[^.]*tidak dapat diubah/i);
+    expect(container.querySelectorAll('img[src="/api/v1/anggota/profil/foto"]')).toHaveLength(1);
+    expect(within(kartuKiri()).getByRole("img", { name: "Foto Aulia Rahma" })).toBeTruthy();
+    // Tombol "Ubah Foto" menyusul setelah endpoint OQ-48; belum ada sekarang.
+    expect(screen.queryByRole("button", { name: /foto/i })).toBeNull();
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it("ringkasan_kiri_id_tanggal_bergabung_tanpa_lencana_aktif_dan_jenis", async () => {
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    const { container } = render(await HalamanProfil());
+    const k = kartuKiri();
+    expect(k.textContent).toContain("ID Anggota");
+    expect(k.textContent).toContain("AGT-000123");
+    expect(k.textContent).toContain("Tanggal Bergabung");
+    expect(k.textContent).toContain("12/01/2026");
+    expect(container.textContent).not.toMatch(/\bAktif\b|Jenis Keanggotaan|Reguler/);
+  });
+
+  it("FR_AGT_03_total_peminjaman_dari_riwayat_total_bertaut", async () => {
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    render(await HalamanProfil());
+    const kartu = within(kartuKiri()).getByRole("link", { name: /^Total Peminjaman/ });
+    expect(kartu.getAttribute("href")).toBe("/anggota/riwayat");
+    expect(kartu.textContent).toContain("12buku");
+  });
+
+  it("riwayat_gagal_kartu_total_hilang_form_tetap", async () => {
+    const galatLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    respons.delete(RIWAYAT_TOTAL);
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    render(await HalamanProfil());
+    expect(within(kartuKiri()).queryByText("Total Peminjaman")).toBeNull();
+    expect(screen.getByRole("button", { name: "Simpan Data Diri" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ubah Password" })).toBeTruthy();
+    expect(galatLog).toHaveBeenCalled();
+    galatLog.mockRestore();
+  });
+
+  it("NFR_SEC_02_kotak_keamanan_hanya_dua_butir", async () => {
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    render(await HalamanProfil());
+    const kotak = screen.getByRole("complementary", { name: "Demi Keamanan Akun Anda" });
+    expect(
+      within(kotak).getByText(
+        "Perubahan password memerlukan password lama sebagai verifikasi identitas.",
+      ),
+    ).toBeTruthy();
+    expect(
+      within(kotak)
+        .getAllByRole("listitem")
+        .map((l) => l.textContent),
+    ).toEqual(["Minimal 8 karakter", "Setelah diubah, sesi di perangkat lain diakhiri"]);
+    expect(screen.queryByText(/huruf besar|karakter khusus|tanggal lahir/i)).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
   });
 });
 

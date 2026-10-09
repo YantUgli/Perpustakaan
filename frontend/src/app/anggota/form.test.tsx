@@ -118,6 +118,42 @@ describe("FormPassword (FR-AKN-09, OQ-32)", () => {
     expect(fetchPalsu).not.toHaveBeenCalled();
   });
 
+  it("tiga_tombol_mata_saling_bebas_menggantikan_checkbox", () => {
+    render(<FormPassword />);
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    const isian = {
+      lama: screen.getByLabelText(/^Password Lama/) as HTMLInputElement,
+      baru: screen.getByLabelText(/^Password Baru/) as HTMLInputElement,
+      konfirmasi: screen.getByLabelText(/^Konfirmasi/) as HTMLInputElement,
+    };
+    const tombol = {
+      lama: screen.getByRole("button", { name: "Tampilkan password lama" }),
+      baru: screen.getByRole("button", { name: "Tampilkan password baru" }),
+      konfirmasi: screen.getByRole("button", { name: "Tampilkan konfirmasi password" }),
+    };
+    for (const t of Object.values(tombol)) {
+      expect(t.getAttribute("type")).toBe("button");
+      expect(t.getAttribute("aria-pressed")).toBe("false");
+    }
+    fireEvent.click(tombol.baru);
+    expect(tombol.baru.getAttribute("aria-pressed")).toBe("true");
+    expect(isian.baru.type).toBe("text");
+    expect(isian.lama.type).toBe("password");
+    expect(isian.konfirmasi.type).toBe("password");
+    expect(tombol.lama.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(tombol.baru);
+    expect(isian.baru.type).toBe("password");
+    // Placeholder & autocomplete.
+    expect(isian.lama.placeholder).toBe("Masukkan password lama Anda");
+    expect(isian.baru.placeholder).toBe("Minimal 8 karakter");
+    expect(isian.konfirmasi.placeholder).toBe("Masukkan kembali password baru");
+    expect(isian.lama.getAttribute("autocomplete")).toBe("current-password");
+    expect(isian.baru.getAttribute("autocomplete")).toBe("new-password");
+    expect(isian.konfirmasi.getAttribute("autocomplete")).toBe("new-password");
+    // Tombol mata tidak mengirim form.
+    expect(fetchPalsu).not.toHaveBeenCalled();
+  });
+
   it("NFR_SEC_02_hanya_syarat_minimal_8 (tanpa aturan kompleksitas karangan)", () => {
     render(<FormPassword />);
     expect(screen.getByText("Minimal 8 karakter.")).toBeTruthy();
