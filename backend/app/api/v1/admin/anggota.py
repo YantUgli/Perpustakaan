@@ -7,8 +7,7 @@ Foto hanya dibaca (GET). Sengaja TIDAK ada: tambah anggota oleh admin, nonaktifk
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -43,14 +42,14 @@ def detail(kode: str, db: DB):
 
 @router.get(
     "/{kode}/foto",
-    response_class=FileResponse,
+    response_class=Response,
     responses={200: {"content": {"image/jpeg": {}, "image/png": {}}}},
 )
-def foto(kode: str, db: DB) -> FileResponse:
+def foto(kode: str, db: DB) -> Response:
     """ASUMSI(OQ-42): foto anggota untuk admin; tanpa foto/berkas hilang → 404."""
     berkas = layanan.foto_anggota(db, kode)
-    return FileResponse(
-        berkas.path,
+    return Response(
+        berkas.isi,
         media_type=berkas.media_type,
         headers={"Cache-Control": layanan.CACHE_CONTROL_FOTO},
     )

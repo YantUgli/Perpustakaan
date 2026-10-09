@@ -5,8 +5,7 @@ Setiap route di sini wajib tercantum di `ROUTE_PUBLIK` (tests/test_autentikasi.p
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -62,12 +61,12 @@ def detail_judul(judul_id: int, db: DB):
 
 @router.get(
     "/judul/{judul_id}/cover",
-    response_class=FileResponse,
+    response_class=Response,
     responses={200: {"content": {"image/jpeg": {}, "image/png": {}}}},
 )
-def cover_judul(judul_id: int, db: DB) -> FileResponse:
+def cover_judul(judul_id: int, db: DB) -> Response:
     berkas = katalog.cover_judul(db, judul_id)
-    return FileResponse(berkas.path, media_type=berkas.media_type)
+    return Response(berkas.isi, media_type=berkas.media_type)
 
 
 @router.get("/kategori", response_model=list[KategoriKeluar])

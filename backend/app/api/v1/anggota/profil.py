@@ -9,7 +9,6 @@ mandiri (K-03).
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, Response
-from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import butuh_anggota
@@ -30,14 +29,14 @@ def profil(db: DB, saya: Anggota):
 
 @router.get(
     "/foto",
-    response_class=FileResponse,
+    response_class=Response,
     responses={200: {"content": {"image/jpeg": {}, "image/png": {}}}},
 )
-def foto(db: DB, saya: Anggota) -> FileResponse:
+def foto(db: DB, saya: Anggota) -> Response:
     """ASUMSI(OQ-42): foto milik anggota yang login; tanpa foto/berkas hilang → 404."""
     berkas = layanan.foto_sendiri(db, saya.id)
-    return FileResponse(
-        berkas.path,
+    return Response(
+        berkas.isi,
         media_type=berkas.media_type,
         headers={"Cache-Control": layanan.CACHE_CONTROL_FOTO},
     )

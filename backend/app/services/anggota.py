@@ -94,12 +94,12 @@ def _profil(a: Anggota) -> ProfilAnggota:
         telepon=a.telepon,
         nik=a.nik,
         tanggal_daftar=a.tanggal_daftar,
-        ada_foto=berkas.berkas_tersimpan(a.foto_path) is not None,
+        ada_foto=berkas.ada(a.foto_path),
     )
 
 
 def _foto(a: Anggota) -> berkas.BerkasTersimpan:
-    """ASUMSI(OQ-42): tanpa foto, berkas hilang, atau path di luar `STORAGE_DIR` → 404."""
+    """ASUMSI(OQ-42): tanpa foto, berkas hilang, atau path bukan buatan server → 404."""
     tersimpan = berkas.berkas_tersimpan(a.foto_path)
     if tersimpan is None:
         raise GalatBisnis(

@@ -1,17 +1,23 @@
 """Unggahan gambar (cover WP 5.3.5, foto anggota WP 5.3.3): NFR-SEC-06.
 
 - Jenis ditentukan dari **isi** (magic bytes + dekode penuh Pillow), bukan nama/Content-Type.
-- Nama berkas di disk dibuat server (UUID + ekstensi format terdeteksi); nama klien diabaikan.
-- Path yang disimpan di DB relatif terhadap `STORAGE_DIR`.
+- Nama berkas dibuat server (`<subfolder>/<uuid>.<ext>`); nama klien diabaikan.
+- Path di DB sama untuk kedua tempat simpan (decisions §B "Penyimpanan file", `STORAGE_BACKEND`):
+  `lokal` → relatif terhadap `STORAGE_DIR`; `supabase` → nama objek di bucket privat Supabase
+  Storage.
+  Gambar hanya keluar lewat endpoint backend (foto: OQ-42), tidak pernah lewat URL bucket.
 """
 
 import io
+import logging
+import re
 import uuid
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, Protocol
 
+import httpx
 from PIL import Image, UnidentifiedImageError
 
 from app.core.config import get_settings
@@ -83,52 +89,177 @@ def periksa_gambar(
     return GambarSah(isi=isi, ekstensi=_EKSTENSI[format_magic])
 
 
-def _folder() -> Path:
-    return get_settings().storage_dir.resolve()
+# ------------------------------------------------------------------------------- tempat simpan
 
+log = logging.getLogger(__name__)
 
-def _path_absolut(path_relatif: str) -> Path:
-    folder = _folder()
-    path = (folder / path_relatif).resolve()
-    if not path.is_relative_to(folder):  # pertahanan berlapis; path di DB selalu buatan server
-        raise ValueError(f"Path di luar STORAGE_DIR: {path_relatif}")
-    return path
-
-
-def simpan(gambar: GambarSah, subfolder: str) -> str:
-    """Tulis ke `<STORAGE_DIR>/<subfolder>/<uuid>.<ext>`; kembalikan path relatif untuk DB."""
-    path_relatif = f"{subfolder}/{uuid.uuid4().hex}.{gambar.ekstensi}"
-    path = _path_absolut(path_relatif)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("xb") as f:  # "x": tidak pernah menimpa berkas yang ada
-        f.write(gambar.isi)
-    return path_relatif
+# Bentuk path buatan `simpan()`; selain ini tidak pernah dibaca/dikirim (pertahanan berlapis).
+_POLA_PATH = re.compile(r"(cover|foto)/[0-9a-f]{32}\.(jpg|png)")
+_TIMEOUT_DETIK = 10.0
+# Diisi test dengan httpx.MockTransport agar mode supabase diuji tanpa jaringan.
+TRANSPORT_UJI: httpx.BaseTransport | None = None
 
 
 @dataclass(frozen=True)
 class BerkasTersimpan:
-    path: Path
+    isi: bytes
     media_type: str
 
 
+def _galat_penyimpanan() -> GalatBisnis:
+    """Tempat simpan tak dapat dihubungi: unggah ditolak sebelum DB berubah, baca → 503."""
+    return GalatBisnis(
+        kode="BERKAS_PENYIMPANAN_GAGAL",
+        pesan="Penyimpanan gambar sedang tidak dapat dihubungi. Coba lagi beberapa saat.",
+        rujukan="NFR-REL-01",
+        status_code=503,
+    )
+
+
+class _Penyimpanan(Protocol):
+    def tulis(self, path: str, isi: bytes, media_type: str) -> None: ...
+    def baca(self, path: str) -> bytes | None: ...
+    def ada(self, path: str) -> bool: ...
+    def hapus(self, path: str) -> None: ...
+
+
+class _Lokal:
+    """Folder `STORAGE_DIR`: dev, CI, test. Di server container, disk hilang setiap deploy."""
+
+    def __init__(self, folder: Path) -> None:
+        self.folder = folder.resolve()
+
+    def _absolut(self, path: str) -> Path:
+        absolut = (self.folder / path).resolve()
+        if not absolut.is_relative_to(self.folder):  # pola path sudah dicek; ini lapis kedua
+            raise ValueError(f"Path di luar STORAGE_DIR: {path}")
+        return absolut
+
+    def tulis(self, path: str, isi: bytes, media_type: str) -> None:
+        absolut = self._absolut(path)
+        absolut.parent.mkdir(parents=True, exist_ok=True)
+        with absolut.open("xb") as f:  # "x": tidak pernah menimpa berkas yang ada
+            f.write(isi)
+
+    def baca(self, path: str) -> bytes | None:
+        absolut = self._absolut(path)
+        return absolut.read_bytes() if absolut.is_file() else None
+
+    def ada(self, path: str) -> bool:
+        return self._absolut(path).is_file()
+
+    def hapus(self, path: str) -> None:
+        self._absolut(path).unlink(missing_ok=True)
+
+
+class _Supabase:
+    """Bucket privat Supabase Storage lewat REST API, dengan kunci secret/service_role."""
+
+    def __init__(self, url: str, kunci: str, bucket: str) -> None:
+        self.dasar = f"{url.rstrip('/')}/storage/v1/object"
+        self.bucket = bucket
+        self.header = {"apikey": kunci, "Authorization": f"Bearer {kunci}"}
+
+    def _klien(self) -> httpx.Client:
+        return httpx.Client(headers=self.header, timeout=_TIMEOUT_DETIK, transport=TRANSPORT_UJI)
+
+    @staticmethod
+    def _hilang(r: httpx.Response) -> bool:
+        """Objek tidak ada: 404, atau 400 ber-`statusCode` "404" (bentuk lama Storage API)."""
+        if r.status_code == 404:
+            return True
+        if r.status_code == 400:
+            try:
+                return str(r.json().get("statusCode")) == "404"
+            except ValueError:
+                return False
+        return False
+
+    def _minta(self, metode: str, url: str, **kw) -> httpx.Response:
+        try:
+            with self._klien() as k:
+                return k.request(metode, url, **kw)
+        except httpx.HTTPError as exc:
+            log.warning("Supabase Storage %s gagal: %s", metode, type(exc).__name__)
+            raise _galat_penyimpanan() from exc
+
+    def tulis(self, path: str, isi: bytes, media_type: str) -> None:
+        r = self._minta(
+            "POST",
+            f"{self.dasar}/{self.bucket}/{path}",
+            content=isi,
+            headers={"Content-Type": media_type, "x-upsert": "false"},
+        )
+        if r.status_code != 200:
+            log.warning("Supabase Storage unggah ditolak: HTTP %s", r.status_code)
+            raise _galat_penyimpanan()
+
+    def baca(self, path: str) -> bytes | None:
+        r = self._minta("GET", f"{self.dasar}/authenticated/{self.bucket}/{path}")
+        if r.status_code == 200:
+            return r.content
+        if self._hilang(r):
+            return None
+        log.warning("Supabase Storage baca ditolak: HTTP %s", r.status_code)
+        raise _galat_penyimpanan()
+
+    def ada(self, path: str) -> bool:
+        """Gangguan → False: halaman profil tetap terbuka dengan avatar inisial (OQ-42)."""
+        try:
+            r = self._minta("HEAD", f"{self.dasar}/authenticated/{self.bucket}/{path}")
+        except GalatBisnis:
+            return False
+        return r.status_code == 200
+
+    def hapus(self, path: str) -> None:
+        """Dipanggil setelah commit; gangguan hanya dicatat (objek yatim), tidak menggagalkan."""
+        try:
+            r = self._minta("DELETE", f"{self.dasar}/{self.bucket}", json={"prefixes": [path]})
+        except GalatBisnis:
+            return
+        if r.status_code != 200:
+            log.warning("Supabase Storage hapus ditolak: HTTP %s", r.status_code)
+
+
+def _penyimpanan() -> _Penyimpanan:
+    s = get_settings()
+    if s.storage_backend == "supabase" and s.supabase_url and s.supabase_service_key:
+        # URL & kunci dijamin ada oleh validator Settings untuk mode supabase.
+        kunci = s.supabase_service_key.get_secret_value()
+        return _Supabase(s.supabase_url, kunci, s.supabase_bucket)
+    return _Lokal(s.storage_dir)
+
+
+def _path_sah(path_relatif: str | None) -> bool:
+    return bool(path_relatif) and _POLA_PATH.fullmatch(path_relatif) is not None
+
+
+def simpan(gambar: GambarSah, subfolder: str) -> str:
+    """Simpan ke `<subfolder>/<uuid>.<ext>`; kembalikan path untuk DB. Gangguan → 503."""
+    path_relatif = f"{subfolder}/{uuid.uuid4().hex}.{gambar.ekstensi}"
+    _penyimpanan().tulis(path_relatif, gambar.isi, _MEDIA_TYPE[gambar.ekstensi])
+    return path_relatif
+
+
 def berkas_tersimpan(path_relatif: str | None) -> BerkasTersimpan | None:
-    """Berkas yang aman disajikan: ada di disk, di dalam `STORAGE_DIR`, berekstensi buatan server.
+    """Gambar yang aman disajikan: path berbentuk buatan server dan objeknya ada.
 
     Content-Type diambil dari ekstensi yang dibuat `simpan()`, bukan dari isi permintaan.
-    Selain itu (kosong, di luar folder, hilang, ekstensi asing) → None.
+    Kosong, bentuk path asing, atau objek hilang → None (endpoint 404); gangguan → 503.
     """
-    if not path_relatif:
+    if not _path_sah(path_relatif):
         return None
-    try:
-        path = _path_absolut(path_relatif)
-    except ValueError:
+    isi = _penyimpanan().baca(path_relatif)
+    if isi is None:
         return None
-    media_type = _MEDIA_TYPE.get(path.suffix.lstrip(".").lower())
-    if media_type is None or not path.is_file():
-        return None
-    return BerkasTersimpan(path=path, media_type=media_type)
+    return BerkasTersimpan(isi=isi, media_type=_MEDIA_TYPE[path_relatif.rsplit(".", 1)[1]])
+
+
+def ada(path_relatif: str | None) -> bool:
+    """Penanda `ada_foto` (OQ-42) tanpa mengunduh isi; gangguan → False."""
+    return _path_sah(path_relatif) and _penyimpanan().ada(path_relatif)
 
 
 def hapus(path_relatif: str | None) -> None:
-    if path_relatif:
-        _path_absolut(path_relatif).unlink(missing_ok=True)
+    if _path_sah(path_relatif):
+        _penyimpanan().hapus(path_relatif)

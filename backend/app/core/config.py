@@ -4,6 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,8 +19,15 @@ class Settings(BaseSettings):
     # Server produksi wajib APP_ENV=production (data uji/performa ditolak di sana).
     app_env: Literal["dev", "staging", "production"] = "dev"
 
-    # Folder unggahan (cover, foto); path di DB relatif terhadap folder ini. Jangan di-commit.
+    # Tempat simpan gambar (decisions §B "Penyimpanan file"): `lokal` = folder STORAGE_DIR (dev, CI,
+    # test); `supabase` = bucket privat Supabase Storage (server; disk container tidak persisten).
+    storage_backend: Literal["lokal", "supabase"] = "lokal"
+    # Folder unggahan mode lokal; path di DB relatif terhadap folder ini. Jangan di-commit.
     storage_dir: Path = Path(__file__).resolve().parents[2] / "storage"
+    # Mode supabase: kunci secret/service_role hanya di env server, tidak pernah ke frontend.
+    supabase_url: str | None = None
+    supabase_service_key: SecretStr | None = None
+    supabase_bucket: str = "perpustakaan"
 
     # Akun admin awal untuk `python -m app.seed admin` (FR-AKN-12). Jangan isi di .env.example.
     admin_awal_nama: str | None = None
@@ -28,6 +36,17 @@ class Settings(BaseSettings):
 
     # Password semua akun `python -m app.seed skenario` / `reset` (dev/staging). Jangan di-commit.
     skenario_password: str | None = None
+
+    @model_validator(mode="after")
+    def _supabase_lengkap(self) -> "Settings":
+        """Mode supabase tanpa URL/kunci → gagal start, bukan gagal saat unggah pertama."""
+        if self.storage_backend == "supabase" and not (
+            self.supabase_url and self.supabase_service_key
+        ):
+            raise ValueError(
+                "STORAGE_BACKEND=supabase wajib SUPABASE_URL dan SUPABASE_SERVICE_KEY."
+            )
+        return self
 
 
 @lru_cache
