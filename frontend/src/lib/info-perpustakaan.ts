@@ -11,6 +11,13 @@
  * sebagai teks penanda (`data-penanda`) dan halaman tidak lolos UAT selama penanda masih ada.
  * "Dalam Angka" dihapus: tidak ada angka dari pemilik proyek.
  */
+/**
+ * Ketentuan pinjam (BR-08, BR-11). Satu sumber untuk baris Fasilitas di Tentang dan manfaat di `/daftar`
+ * (hal-08, keputusan Ayen 09/10/2026).
+ */
+export const KETENTUAN_PINJAM =
+  "maksimal 3 buku dipinjam pada saat yang sama, masa pinjam 30 hari.";
+
 export type BagianTentang = {
   judul: string;
   paragraf?: string[];
@@ -38,7 +45,7 @@ export const BAGIAN_TENTANG: BagianTentang[] = [
     judul: "Fasilitas & Layanan",
     daftar: [
       "Katalog daring: cari buku berdasarkan judul, penulis, ISBN, atau kategori, lengkap dengan lokasi rak dan jumlah eksemplar tersedia.",
-      "Peminjaman buku fisik: maksimal 3 buku dipinjam pada saat yang sama, masa pinjam 30 hari.",
+      `Peminjaman buku fisik: ${KETENTUAN_PINJAM}`,
       "Sirkulasi cepat dengan pemindaian kode QR anggota dan buku oleh petugas.",
       "Area anggota: pantau buku yang dipinjam, tanggal jatuh tempo, riwayat, dan tagihan.",
       "Ruang baca di tempat.",
