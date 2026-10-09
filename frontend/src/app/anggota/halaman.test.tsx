@@ -25,7 +25,11 @@ const { default: HalamanRiwayat } = await import("./riwayat/page");
 const { default: HalamanTagihan } = await import("./tagihan/page");
 const { default: HalamanProfil } = await import("./profil/page");
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
+  // Galat biasa bukan sinyal internal Next: tidak dilempar ulang.
+  unstable_rethrow: () => {},
+}));
 
 const PINJAMAN = [
   {
@@ -445,6 +449,136 @@ describe("QR anggota (FR-AGT-01)", () => {
     expect(screen.getByText("AGT-000123")).toBeTruthy();
     expect(screen.getByText("Aulia Rahma")).toBeTruthy();
     expect(screen.queryByText(/NIK/)).toBeNull(); // P3: NIK tidak di halaman QR
+  });
+
+  const QR_AULIA = { kode: "AGT-000123", nama: "Aulia Rahma", isi_qr: "AGT-000123" };
+  const kartuDigital = () => screen.getByRole("article", { name: "Kartu anggota digital" });
+
+  it("FR_AGT_01_kartu_digital_qr_kode_nama", async () => {
+    respons.set("/anggota/qr", QR_AULIA);
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    render(await HalamanQr());
+    const k = kartuDigital();
+    expect(within(k).getByText("Kartu Anggota Digital")).toBeTruthy();
+    expect(within(k).getByText("Perpustakaan Naratif")).toBeTruthy();
+    expect(within(k).getByText("Aulia Rahma")).toBeTruthy();
+    expect(within(k).getByText("ID Anggota")).toBeTruthy();
+    expect(within(k).getByText("AGT-000123")).toBeTruthy();
+    expect(within(k).getByText("Dipindai oleh petugas perpustakaan")).toBeTruthy();
+    expect(within(k).getByRole("img", { name: "QR anggota AGT-000123" })).toBeTruthy();
+    // Subjudul kepala tidak berubah.
+    expect(
+      screen.getByText("Tunjukkan QR ini kepada petugas perpustakaan saat meminjam buku."),
+    ).toBeTruthy();
+    expect(dipanggil).toEqual(expect.arrayContaining(["/anggota/qr", "/anggota/profil"]));
+  });
+
+  it("FR_AGT_01_qr_hitam_putih_min_256_di_area_putih", async () => {
+    respons.set("/anggota/qr", QR_AULIA);
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    render(await HalamanQr());
+    const qr = screen.getByRole("img", { name: "QR anggota AGT-000123" });
+    expect(Number(qr.getAttribute("width"))).toBeGreaterThanOrEqual(256);
+    expect(qr.innerHTML).toContain('fill="#000000"');
+    // QR di area putih (bukan di atas kepala navy).
+    expect(qr.parentElement!.className).toContain("bg-white");
+    expect(qr.closest(".bg-navy")).toBeNull();
+  });
+
+  it("tata_letak_dua_kolom_mulai_xl_qr_di_atas_identitas_di_bawah_xl", async () => {
+    respons.set("/anggota/qr", QR_AULIA);
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    render(await HalamanQr());
+    const k = kartuDigital();
+    expect(k.parentElement!.className).toContain("xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]");
+    const kotakQr = screen.getByRole("img", { name: "QR anggota AGT-000123" }).parentElement!;
+    // Urutan DOM: QR lebih dulu (di atas pada layar sempit); mulai xl pindah ke kanan.
+    expect(kotakQr.parentElement!.firstElementChild).toBe(kotakQr);
+    expect(kotakQr.className).toContain("xl:order-last");
+    // 360 px: padding sempit di bawah sm agar QR 256 px muat tanpa gulir horizontal.
+    expect(kotakQr.className).toMatch(/(^| )p-2( |$)/);
+    expect(kotakQr.parentElement!.className).toMatch(/(^| )p-3( |$)/);
+  });
+
+  it("DR_02_bergabung_sejak_dari_tanggal_daftar", async () => {
+    respons.set("/anggota/qr", QR_AULIA);
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    render(await HalamanQr());
+    const k = kartuDigital();
+    expect(within(k).getByText("Bergabung Sejak")).toBeTruthy();
+    expect(within(k).getByText("12/01/2026")).toBeTruthy();
+  });
+
+  it("OQ_42_foto_bila_ada_foto_inisial_bila_tidak", async () => {
+    respons.set("/anggota/qr", QR_AULIA);
+    respons.set("/anggota/profil", { ...PROFIL_AULIA, ada_foto: true });
+    const { unmount } = render(await HalamanQr());
+    expect(kartuDigital().querySelector("img")?.getAttribute("src")).toBe(
+      "/api/v1/anggota/profil/foto",
+    );
+    unmount();
+
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    render(await HalamanQr());
+    expect(kartuDigital().querySelector("img")).toBeNull();
+    const inisialAvatar = within(kartuDigital()).getByRole("img", { name: "Aulia Rahma" });
+    expect(inisialAvatar.textContent).toBe("AR");
+    // Revisi Ayen 09/10/2026: wadah foto besar (128/160/176 px), bukan ukuran "besar" 96 px.
+    expect(inisialAvatar.className).toContain("size-32");
+    expect(inisialAvatar.className).toContain("sm:size-40");
+  });
+
+  it("P3_tanpa_nik_di_halaman_qr", async () => {
+    respons.set("/anggota/qr", QR_AULIA);
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    const { container } = render(await HalamanQr());
+    expect(screen.queryByText(/NIK/)).toBeNull();
+    expect(container.textContent).not.toContain(PROFIL_AULIA.nik);
+    expect(container.textContent).not.toContain(PROFIL_AULIA.nik.slice(-4));
+  });
+
+  it("tanpa_status_aktif_dan_jenis_anggota", async () => {
+    respons.set("/anggota/qr", QR_AULIA);
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    const { container } = render(await HalamanQr());
+    expect(container.textContent).not.toMatch(/\bAktif\b/);
+    expect(container.textContent).not.toMatch(/Jenis Anggota|Reguler/);
+  });
+
+  it("informasi_anggota_dan_tautan_edit_profil", async () => {
+    respons.set("/anggota/qr", QR_AULIA);
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    const { container } = render(await HalamanQr());
+    const info = screen.getByRole("region", { name: "Informasi Anggota" });
+    for (const teks of ["Aulia Rahma", "aulia@contoh.example", "0812", "Jl. Melati 12"]) {
+      expect(within(info).getByText(teks)).toBeTruthy();
+    }
+    expect(within(info).getByRole("link", { name: "Edit Profil" }).getAttribute("href")).toBe(
+      "/anggota/profil",
+    );
+    // Hanya tampilan: tanpa form di halaman QR.
+    expect(container.querySelector("form, input, textarea")).toBeNull();
+    expect(screen.getByRole("region", { name: "Cara Menggunakan QR Anggota" })).toBeTruthy();
+  });
+
+  it("OQ_42_profil_gagal_kartu_qr_tetap_tampil", async () => {
+    const galatLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    respons.set("/anggota/qr", QR_AULIA);
+    // /anggota/profil tidak diatur → server palsu melempar galat.
+    render(await HalamanQr());
+    const k = kartuDigital();
+    expect(within(k).getByText("AGT-000123")).toBeTruthy();
+    expect(within(k).getByRole("img", { name: "QR anggota AGT-000123" })).toBeTruthy();
+    expect(within(k).getByRole("img", { name: "Aulia Rahma" }).textContent).toBe("AR");
+    expect(screen.queryByText("Bergabung Sejak")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Informasi Anggota" })).toBeNull();
+    expect(galatLog).toHaveBeenCalled();
+    galatLog.mockRestore();
+  });
+
+  it("FR_AGT_01_qr_gagal_diteruskan_ke_batas_galat", async () => {
+    respons.set("/anggota/profil", PROFIL_AULIA);
+    await expect(HalamanQr()).rejects.toThrow(/anggota\/qr/);
   });
 });
 

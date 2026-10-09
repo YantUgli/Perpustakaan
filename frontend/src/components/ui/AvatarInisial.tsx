@@ -11,6 +11,11 @@ const UKURAN = {
   kecil: "size-8 text-xs",
   sedang: "size-11 text-sm",
   besar: "size-24 text-2xl",
+  /**
+   * Kartu anggota digital `/anggota/qr` (hal-10): 128 px, 160 px mulai `sm`, 144 px di `xl` (kolom identitas
+   * ±180 px di 1280 px), 176 px mulai `2xl`.
+   */
+  kartu: "size-32 text-4xl sm:size-40 sm:text-5xl xl:size-36 2xl:size-44",
 } as const;
 
 export type UkuranAvatar = keyof typeof UKURAN;
