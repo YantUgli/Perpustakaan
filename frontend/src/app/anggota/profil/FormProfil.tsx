@@ -100,16 +100,17 @@ export function FormProfil({ awal }: { awal: Profil }) {
           onChange={ubah("telepon")}
           galat={galatIsian.telepon}
         />
+        {/* hal-16: alamat di kolom kanan, sebaris dengan telepon. */}
+        <AreaIsian
+          label="Alamat sesuai KTP"
+          name="alamat"
+          autoComplete="street-address"
+          required
+          value={nilai.alamat}
+          onChange={ubah("alamat")}
+          galat={galatIsian.alamat}
+        />
       </div>
-      <AreaIsian
-        label="Alamat sesuai KTP"
-        name="alamat"
-        autoComplete="street-address"
-        required
-        value={nilai.alamat}
-        onChange={ubah("alamat")}
-        galat={galatIsian.alamat}
-      />
       <div>
         <Tombol type="submit" disabled={proses}>
           {proses ? "Menyimpan…" : "Simpan Data Diri"}
