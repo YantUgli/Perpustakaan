@@ -10,7 +10,7 @@ import { PER_HALAMAN_KLIEN, ambilSemuaHalaman, potongHalaman } from "@/lib/area-
 import { formatRupiah } from "@/lib/format";
 import { halamanDariParam } from "@/lib/halaman";
 
-import { KartuRingkas } from "../_komponen/KartuRingkas";
+import { KartuRingkas } from "@/components/ui/KartuRingkas";
 import { KartuTagihan } from "../_komponen/KartuTagihan";
 import { KotakInfo } from "../_komponen/KotakInfo";
 import { TabelTagihan } from "../_komponen/TabelTagihan";

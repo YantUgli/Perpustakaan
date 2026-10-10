@@ -9,7 +9,7 @@ import type { components } from "@/lib/api-skema";
 
 import { KartuJatuhTempoTerdekat } from "../_komponen/KartuJatuhTempoTerdekat";
 import { KartuPinjaman } from "../_komponen/KartuPinjaman";
-import { KartuRingkas } from "../_komponen/KartuRingkas";
+import { KartuRingkas } from "@/components/ui/KartuRingkas";
 import { KotakInfo } from "../_komponen/KotakInfo";
 import { TabelPinjaman } from "../_komponen/TabelPinjaman";
 

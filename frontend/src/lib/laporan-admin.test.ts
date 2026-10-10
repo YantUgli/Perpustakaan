@@ -17,6 +17,8 @@ import {
   paramFilterTransaksi,
   paramsPaginasi,
   queryTagihan,
+  ringkasEksemplar,
+  segmenDonut,
   queryTransaksi,
   urlEksporTagihan,
   urlEksporTransaksi,
@@ -258,6 +260,69 @@ describe("Dashboard (FR-LAP-01, OQ-40)", () => {
     const hasil = urutkanEksemplar({ TERSEDIA: 1, DIPINJAM: 2, HILANG: 3, RUSAK: 4 });
     expect(hasil).toHaveLength(4);
     expect(hasil.map((h) => h.jumlah)).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe("Ringkasan eksemplar dashboard (FR-LAP-01, keputusan Ayen 10/10/2026)", () => {
+  it("FR_LAP_01_ringkasEksemplar_total_jumlah_empat_status_dan_persen_dibulatkan", () => {
+    const r = ringkasEksemplar({ TERSEDIA: 3120, DIPINJAM: 980, HILANG: 120, RUSAK: 100 });
+    expect(r.total).toBe(4320);
+    expect(r.baris).toEqual([
+      { status: "TERSEDIA", jumlah: 3120, persen: 72 },
+      { status: "DIPINJAM", jumlah: 980, persen: 23 },
+      { status: "HILANG", jumlah: 120, persen: 3 },
+      { status: "RUSAK", jumlah: 100, persen: 2 },
+    ]);
+  });
+
+  it("FR_LAP_01_ringkasEksemplar_total_nol_tanpa_persen_dan_tanpa_NaN", () => {
+    const r = ringkasEksemplar({ TERSEDIA: 0, DIPINJAM: 0, HILANG: 0, RUSAK: 0 });
+    expect(r.total).toBe(0);
+    expect(r.baris.map((b) => b.persen)).toEqual([null, null, null, null]);
+  });
+
+  it("OQ_40_ringkasEksemplar_satu_status_tidak_dikirim_total_dan_persen_null", () => {
+    const r = ringkasEksemplar({ TERSEDIA: 5, DIPINJAM: 1, RUSAK: 2 });
+    expect(r.total).toBeNull();
+    expect(r.baris.map((b) => b.jumlah)).toEqual([5, 1, null, 2]);
+    expect(r.baris.map((b) => b.persen)).toEqual([null, null, null, null]);
+  });
+});
+
+describe("Segmen donut status eksemplar (hanya geometri tampilan)", () => {
+  const KELILING = 100;
+
+  it("segmen_mengisi_keliling_dikurangi_celah_dan_berurutan", () => {
+    const s = segmenDonut([50, 30, 20], KELILING, 2);
+    expect(s).toEqual([
+      { indeks: 0, panjang: 48, mulai: 0 },
+      { indeks: 1, panjang: 28, mulai: 50 },
+      { indeks: 2, panjang: 18, mulai: 80 },
+    ]);
+    const terisi = s.reduce((a, x) => a + x.panjang, 0) + s.length * 2;
+    expect(terisi).toBeCloseTo(KELILING);
+  });
+
+  it("segmen_bernilai_nol_dilewati_tanpa_menggeser_indeks", () => {
+    const s = segmenDonut([60, 0, 40, 0], KELILING, 2);
+    expect(s.map((x) => x.indeks)).toEqual([0, 2]);
+    expect(s[1].mulai).toBe(60);
+  });
+
+  it("satu_status_100_persen_lingkaran_penuh_tanpa_celah", () => {
+    expect(segmenDonut([0, 7, 0, 0], KELILING, 2)).toEqual([
+      { indeks: 1, panjang: KELILING, mulai: 0 },
+    ]);
+  });
+
+  it("segmen_lebih_kecil_dari_celah_tidak_negatif", () => {
+    const s = segmenDonut([999, 1], KELILING, 2);
+    expect(s.every((x) => x.panjang >= 0)).toBe(true);
+  });
+
+  it("semua_nol_atau_ada_null_tanpa_segmen", () => {
+    expect(segmenDonut([0, 0, 0, 0], KELILING, 2)).toEqual([]);
+    expect(segmenDonut([5, null, 1, 0], KELILING, 2)).toEqual([]);
   });
 });
 
