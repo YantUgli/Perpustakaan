@@ -2,7 +2,7 @@ import type { components } from "@/lib/api-skema";
 import { teksSisaHari } from "@/lib/area-anggota";
 import { formatTanggal } from "@/lib/format";
 
-import { KartuRingkas } from "./KartuRingkas";
+import { KartuRingkas } from "@/components/ui/KartuRingkas";
 
 type Pinjaman = components["schemas"]["PinjamanAktifKeluar"];
 

@@ -1,7 +1,8 @@
 /**
- * Logika halaman dashboard & laporan admin (WP 5.4.9, FR-LAP-01..04). Klien tidak menghitung angka:
- * dashboard, `total_nominal`, dan status `Terlambat` (field `terlambat`) selalu dari API. Daftar dan
- * tautan ekspor dibentuk dari **satu** penyusun filter agar berkas yang diunduh cocok dengan layar.
+ * Logika halaman dashboard & laporan admin (WP 5.4.9, FR-LAP-01..04). Angka dashboard, `total_nominal`, dan
+ * status `Terlambat` (field `terlambat`) selalu dari API; satu-satunya turunan klien adalah total & persen
+ * eksemplar untuk tampilan (`ringkasEksemplar`, keputusan Ayen 10/10/2026). Daftar dan tautan ekspor dibentuk
+ * dari **satu** penyusun filter agar berkas yang diunduh cocok dengan layar.
  */
 import { urlApi } from "./api";
 import { halamanDariParam } from "./halaman";
@@ -171,7 +172,7 @@ export function paramsPaginasi(
 }
 
 /**
- * Empat status eksemplar dalam urutan tetap; jumlah apa adanya dari API (tidak dijumlahkan di klien).
+ * Empat status eksemplar dalam urutan tetap; jumlah apa adanya dari API.
  * OQ-40: backend selalu mengirim keempat status. Status yang hilang adalah pelanggaran kontrak, bukan
  * jumlah nol, jadi `jumlah` = `null` (UI menampilkan "—"), tidak diisi 0.
  */
@@ -179,4 +180,54 @@ export function urutkanEksemplar(
   dict: Partial<Record<string, number>>,
 ): { status: string; jumlah: number | null }[] {
   return URUT_STATUS_EKSEMPLAR.map((status) => ({ status, jumlah: dict[status] ?? null }));
+}
+
+export type RingkasanEksemplar = {
+  /** Jumlah keempat status (semua eksemplar, termasuk Hilang & Rusak; bukan Y katalog FR-KTL-03). */
+  total: number | null;
+  baris: { status: string; jumlah: number | null; persen: number | null }[];
+};
+
+/**
+ * Total & persen eksemplar untuk kartu dan donut dashboard. **Hanya tampilan** (keputusan Ayen 10/10/2026):
+ * total = jumlah 4 status `eksemplar_per_status`; persen `Math.round`, sehingga jumlahnya bisa 99–101%.
+ * Satu status tidak dikirim (OQ-40) → total dan semua persen `null` ("—"); total 0 → persen `null`.
+ */
+export function ringkasEksemplar(dict: Partial<Record<string, number>>): RingkasanEksemplar {
+  const urut = urutkanEksemplar(dict);
+  const lengkap = urut.every((b) => b.jumlah !== null);
+  const total = lengkap ? urut.reduce((a, b) => a + (b.jumlah ?? 0), 0) : null;
+  return {
+    total,
+    baris: urut.map((b) => ({
+      ...b,
+      persen: total && b.jumlah !== null ? Math.round((b.jumlah / total) * 100) : null,
+    })),
+  };
+}
+
+/**
+ * Geometri segmen donut (stroke-dasharray pada lingkaran ber-`keliling`): `mulai` = posisi awal di keliling,
+ * `panjang` = panjang garis setelah dikurangi `celah` pemisah. Nilai 0 dilewati (indeks asli tetap, untuk warna);
+ * satu-satunya nilai tak nol → lingkaran penuh tanpa celah. Ada `null` atau semua 0 → tanpa segmen.
+ */
+export function segmenDonut(
+  jumlah: (number | null)[],
+  keliling: number,
+  celah: number,
+): { indeks: number; panjang: number; mulai: number }[] {
+  if (jumlah.some((n) => n === null)) return [];
+  const nilai = jumlah as number[];
+  const total = nilai.reduce((a, n) => a + n, 0);
+  if (total === 0) return [];
+  const tunggal = nilai.filter((n) => n > 0).length === 1;
+  const hasil: { indeks: number; panjang: number; mulai: number }[] = [];
+  let mulai = 0;
+  nilai.forEach((n, indeks) => {
+    if (n === 0) return;
+    const bagian = (n / total) * keliling;
+    hasil.push({ indeks, panjang: tunggal ? keliling : Math.max(bagian - celah, 0), mulai });
+    mulai += bagian;
+  });
+  return hasil;
 }

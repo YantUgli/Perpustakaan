@@ -19,7 +19,7 @@ import {
 import { halamanDariParam } from "@/lib/halaman";
 import { LABEL_STATUS } from "@/lib/label";
 
-import { KartuRingkas } from "../_komponen/KartuRingkas";
+import { KartuRingkas } from "@/components/ui/KartuRingkas";
 import { KartuRiwayat } from "../_komponen/KartuRiwayat";
 import { TabelRiwayat } from "../_komponen/TabelRiwayat";
 

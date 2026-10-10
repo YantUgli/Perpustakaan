@@ -3,7 +3,7 @@ import type { components } from "@/lib/api-skema";
 import { formatRupiah, formatTanggal } from "@/lib/format";
 import { LABEL_JENIS_TAGIHAN } from "@/lib/label";
 
-import { PanelDashboard } from "./PanelDashboard";
+import { PanelDashboard } from "@/components/ui/PanelDashboard";
 
 type Tagihan = components["schemas"]["TagihanAnggotaKeluar"];
 

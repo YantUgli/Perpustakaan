@@ -2,13 +2,16 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Ikon, type NamaIkon } from "@/components/ui/Ikon";
+import { formatAngka } from "@/lib/format";
 
-/** Nada lingkaran ikon (hal-09), dari token status/gold; ikon dekoratif. */
+/** Nada lingkaran ikon (hal-09, hal-31), dari token status/gold; ikon dekoratif. */
 const NADA = {
   biru: "bg-status-dipinjam-bg text-navy",
   gold: "bg-gold/15 text-gold-700",
   merah: "bg-status-hilang-bg text-status-hilang",
   abu: "bg-status-dikembalikan-bg text-navy",
+  hijau: "bg-status-tersedia-bg text-status-tersedia",
+  oranye: "bg-status-terlambat-bg text-status-terlambat",
 } as const;
 
 type Props = {
@@ -17,14 +20,18 @@ type Props = {
   label: string;
   ikon: NamaIkon;
   nada: keyof typeof NADA;
-  /** Angka besar atau teks pendek (mis. "Terlambat 4 hari"). */
+  /**
+   * Angka besar (diformat `formatAngka`: 4120 → "4.120"), `null` = angka tidak dikirim API (tampil "—", OQ-40),
+   * atau teks pendek (mis. "Terlambat 4 hari").
+   */
   nilai: ReactNode;
   satuan?: string;
   keterangan?: ReactNode;
 };
 
 /**
- * Kartu ringkas area anggota (hal-09, hal-11): ikon dalam lingkaran, label, nilai & satuan, keterangan opsional.
+ * Kartu ringkas area anggota & dashboard admin (hal-09, hal-11, hal-31): ikon dalam lingkaran, label, nilai &
+ * satuan, keterangan opsional.
  * Bertaut: nama aksesibel diawali `label` lalu nilai & satuan, sehingga tidak bergantung pada ikon atau warna.
  */
 export function KartuRingkas({ href, label, ikon, nada, nilai, satuan, keterangan }: Props) {
@@ -39,10 +46,10 @@ export function KartuRingkas({ href, label, ikon, nada, nilai, satuan, keteranga
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="text-sm text-navy/70">{label}</span>
         <span className="flex items-baseline gap-1.5">
-          {typeof nilai === "number" ? (
+          {typeof nilai === "number" || nilai === null ? (
             // Bukan `.angka`: kelas global itu menimpa `lining-nums` (Playfair bawaannya old-style, 0 mirip "O").
             <span className="font-display text-3xl leading-none tabular-nums lining-nums">
-              {nilai}
+              {nilai === null ? "—" : formatAngka(nilai)}
             </span>
           ) : (
             nilai

@@ -2,7 +2,7 @@ import { Ikon } from "@/components/ui/Ikon";
 import type { components } from "@/lib/api-skema";
 import { formatTanggal } from "@/lib/format";
 
-import { KartuRingkas } from "../_komponen/KartuRingkas";
+import { KartuRingkas } from "@/components/ui/KartuRingkas";
 import { UbahFoto } from "./UbahFoto";
 
 type Profil = components["schemas"]["ProfilKeluar"];

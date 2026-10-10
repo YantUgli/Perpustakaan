@@ -10,8 +10,8 @@ import { pinjamanTerdekat, tagihanAktif } from "@/lib/area-anggota";
 import { BannerKelayakan } from "./_komponen/BannerKelayakan";
 import { BarisPinjamanTerdekat } from "./_komponen/BarisPinjamanTerdekat";
 import { KartuJatuhTempoTerdekat } from "./_komponen/KartuJatuhTempoTerdekat";
-import { KartuRingkas } from "./_komponen/KartuRingkas";
-import { PanelDashboard } from "./_komponen/PanelDashboard";
+import { KartuRingkas } from "@/components/ui/KartuRingkas";
+import { PanelDashboard } from "@/components/ui/PanelDashboard";
 import { PanelRiwayatTerbaru } from "./_komponen/PanelRiwayatTerbaru";
 import { PanelTagihanAktif } from "./_komponen/PanelTagihanAktif";
 

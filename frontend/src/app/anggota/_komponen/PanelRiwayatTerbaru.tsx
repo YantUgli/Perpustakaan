@@ -2,7 +2,7 @@ import { LabelStatus } from "@/components/ui/LabelStatus";
 import type { components } from "@/lib/api-skema";
 import { formatTanggal } from "@/lib/format";
 
-import { PanelDashboard } from "./PanelDashboard";
+import { PanelDashboard } from "@/components/ui/PanelDashboard";
 
 type ItemRiwayat = components["schemas"]["ItemRiwayatKeluar"];
 
