@@ -124,6 +124,46 @@ def test_OQ_04_cookie_httponly_secure_samesite_lax_di_semua_app_env(db, monkeypa
     assert {"httponly", "secure", "samesite=lax", "path=/"} <= atribut
 
 
+def test_OQ_04_cookie_secure_bawaan_aktif():
+    from app.core.config import Settings
+
+    assert Settings.model_fields["cookie_secure"].default is True
+
+
+def test_OQ_04_cookie_secure_false_di_dev_menghapus_atribut_secure(db, monkeypatch):
+    from app.core.config import get_settings
+    from app.db import get_db
+    from app.main import create_app
+
+    akun = _admin(db)
+    monkeypatch.setenv("APP_ENV", "dev")
+    monkeypatch.setenv("COOKIE_SECURE", "false")
+    get_settings.cache_clear()
+    try:
+        app = create_app()
+        app.dependency_overrides[get_db] = lambda: db
+        with TestClient(app, base_url="http://testserver") as klien:
+            r = _login(klien, akun.email)
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()
+    atribut = {a.strip().lower() for a in r.headers["set-cookie"].split(";")[1:]}
+    assert "secure" not in atribut
+    assert {"httponly", "samesite=lax", "path=/"} <= atribut
+
+
+@pytest.mark.parametrize("app_env", ["staging", "production"])
+def test_OQ_04_cookie_secure_false_ditolak_di_luar_dev(monkeypatch, app_env):
+    from pydantic import ValidationError
+
+    from app.core.config import Settings
+
+    monkeypatch.setenv("APP_ENV", app_env)
+    monkeypatch.setenv("COOKIE_SECURE", "false")
+    with pytest.raises(ValidationError, match="COOKIE_SECURE"):
+        Settings()
+
+
 def test_OQ_04_token_disimpan_sebagai_hash(client, db):
     akun = _admin(db)
     _login(client, akun.email)

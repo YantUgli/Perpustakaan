@@ -6,6 +6,7 @@ from fastapi import APIRouter, Cookie, Depends, Form, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from app.api.deps import butuh_login
+from app.core.config import get_settings
 from app.db import get_db
 from app.schemas.auth import PermintaanLogin, ResponsLogin, ResponsSaya
 from app.schemas.pendaftaran import HasilDaftarKeluar
@@ -14,9 +15,13 @@ from app.services.autentikasi import NAMA_COOKIE, Pengguna
 
 router = APIRouter(prefix="/auth", tags=["autentikasi"])
 
-# ASUMSI(OQ-04): Secure selalu aktif, tanpa saklar (browser menganggap localhost aman).
+
+# ASUMSI(OQ-04): Secure aktif kecuali COOKIE_SECURE=false di dev (uji lewat IP LAN tanpa HTTPS).
 # SameSite=Lax melindungi dari CSRF hanya bila tidak ada GET yang mengubah state.
-_ATRIBUT_COOKIE = {"httponly": True, "secure": True, "samesite": "lax", "path": "/"}
+def _atribut_cookie() -> dict:
+    secure = get_settings().cookie_secure
+    return {"httponly": True, "secure": secure, "samesite": "lax", "path": "/"}
+
 
 TokenCookie = Annotated[str | None, Cookie(alias=NAMA_COOKIE)]
 DB = Annotated[Session, Depends(get_db)]
@@ -60,7 +65,7 @@ def login(data: PermintaanLogin, response: Response, db: DB, token: TokenCookie 
     token_baru, pengguna = autentikasi.login(
         db, email=data.email, password=data.password, token_lama=token
     )
-    response.set_cookie(NAMA_COOKIE, token_baru, **_ATRIBUT_COOKIE)
+    response.set_cookie(NAMA_COOKIE, token_baru, **_atribut_cookie())
     return ResponsLogin(role=pengguna.role, nama=pengguna.nama)
 
 
@@ -69,7 +74,7 @@ def logout(db: DB, token: TokenCookie = None) -> Response:
     """FR-AKN-06: akhiri sesi di server dan kosongkan cookie."""
     autentikasi.logout(db, token)
     response = Response(status_code=204)
-    response.delete_cookie(NAMA_COOKIE, **_ATRIBUT_COOKIE)
+    response.delete_cookie(NAMA_COOKIE, **_atribut_cookie())
     return response
 
 

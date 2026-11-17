@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # Server produksi wajib APP_ENV=production (data uji/performa ditolak di sana).
     app_env: Literal["dev", "staging", "production"] = "dev"
 
+    # OQ-04: cookie sesi ber-atribut Secure. Browser hanya menerimanya lewat HTTPS atau localhost;
+    # false hanya untuk uji dev lewat IP LAN (http://10.x...), ditolak di luar APP_ENV=dev.
+    cookie_secure: bool = True
+
     # Tempat simpan gambar (decisions §B "Penyimpanan file"): `lokal` = folder STORAGE_DIR (dev, CI,
     # test); `supabase` = bucket privat Supabase Storage (server; disk container tidak persisten).
     storage_backend: Literal["lokal", "supabase"] = "lokal"
@@ -46,6 +50,13 @@ class Settings(BaseSettings):
             raise ValueError(
                 "STORAGE_BACKEND=supabase wajib SUPABASE_URL dan SUPABASE_SERVICE_KEY."
             )
+        return self
+
+    @model_validator(mode="after")
+    def _cookie_secure_di_luar_dev(self) -> "Settings":
+        """COOKIE_SECURE=false hanya sah di dev; di staging/produksi gagal start."""
+        if not self.cookie_secure and self.app_env != "dev":
+            raise ValueError("COOKIE_SECURE=false hanya boleh dengan APP_ENV=dev.")
         return self
 
 

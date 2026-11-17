@@ -25,6 +25,8 @@ except DatabaseTestTidakAman as exc:
 
 # Arahkan aplikasi ke database test.
 os.environ["DATABASE_URL"] = DATABASE_URL_TEST
+# COOKIE_SECURE=false di .env lokal (uji lewat IP LAN) tidak boleh ikut ke test.
+os.environ["COOKIE_SECURE"] = "true"
 get_settings.cache_clear()
 
 
